@@ -2,7 +2,7 @@ import Button from "@/components/Button";
 import FormField from "@/components/FormField";
 import Input from "@/components/Input";
 import TextLink from "@/components/TextLink";
-import PasswordInput from "./PasswordInput";
+import PasswordInput from "../PasswordInput";
 
 // UI only. To preview the error state, pass messages in, e.g.
 // <SignUpForm errors={{ name: "Enter your name." }} />
