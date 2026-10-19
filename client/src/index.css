@@ -1,5 +1,70 @@
 @import "tailwindcss";
 
 @theme {
+  /* ---------- Colors (light mode) ---------- */
+  --color-paper: #f5f2ea; /* page background */
+  --color-surface: #fbfaf6; /* inputs, raised areas */
+  --color-ink: #1d1c1a; /* main text, primary buttons, dark panels */
+  --color-on-ink: #f5f2ea; /* text that sits on top of ink */
+  --color-muted: #625e56; /* secondary text, input borders */
+  --color-rule: #d9d3c5; /* dividers and hairlines */
+  --color-tint: #ece7d9; /* hover background */
 
+  --color-accent: #1f5a46; /* brand green */
+  --color-accent-soft: #d6e4dc; /* success background */
+  --color-accent-on-ink: #7cc7a6; /* accent text on the ink panel */
+
+  --color-danger: #a23b24;
+  --color-danger-soft: #f3dcd4;
+
+  --color-info: #3d5373;
+  --color-info-soft: #e3e8f0;
+
+  /* ---------- Fonts ---------- */
+  --font-serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* ---------- Spacing ---------- */
+  --spacing-gutter: clamp(24px, 5vw, 64px); /* side padding of the form panel */
+  --spacing-story-gutter: clamp(28px, 4vw, 56px); /* side padding of the dark panel */
+}
+
+/* Dark mode: same names, new values. Every utility updates automatically. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper: #151513;
+    --color-surface: #1c1c19;
+    --color-ink: #ece8dd;
+    --color-on-ink: #151513;
+    --color-muted: #a29d90;
+    --color-rule: #35342f;
+    --color-tint: #22221e;
+
+    --color-accent: #7cc7a6;
+    --color-accent-soft: #233a31;
+    --color-accent-on-ink: #1f5a46;
+
+    --color-danger: #e08a6f;
+    --color-danger-soft: #3a2620;
+
+    --color-info: #9db4d6;
+    --color-info-soft: #222b38;
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-paper font-sans text-base leading-[1.6] text-ink antialiased;
+    min-height: 100vh;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
 }
