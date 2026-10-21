@@ -1,18 +1,17 @@
 const express = require('express');
+const knex = require('./db/knex');
 
 const app = express();
 app.use(express.json());
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-app.get('/api/jobs', (req, res) => {
-  res.json([{ id: 1, title: 'Frontend Developer', company: 'Northwind' }]);
-});
-
-app.post('/api/jobs', (req, res) => {
-  res.status(201).json({ id: 2, ...req.body });
+app.get('/health', async (req, res) => {
+  try {
+    await knex.raw('SELECT 1');
+    res.json({ status: 'ok', db: 'connected' });
+  } catch (err) {
+    console.error(err);
+    res.status(503).json({ status: 'error', db: 'unreachable' });
+  }
 });
 
 module.exports = app;
