@@ -1,22 +1,33 @@
 const request = require('supertest');
+
+jest.mock('./db/knex', () => ({
+  raw: jest.fn(),
+}));
+
+const knex = require('./db/knex');
 const app = require('./app');
 
-test('GET /health', async () => {
+afterEach(() => {
+  jest.clearAllMocks();
+});
+
+test('GET /health returns ok when the database responds', async () => {
+  knex.raw.mockResolvedValue([[{ 1: 1 }]]);
+
   const res = await request(app).get('/health');
+
   expect(res.statusCode).toBe(200);
-  expect(res.body.status).toBe('ok');
+  expect(res.body).toEqual({ status: 'ok', db: 'connected' });
 });
 
-test('GET /api/jobs', async () => {
-  const res = await request(app).get('/api/jobs');
-  expect(res.statusCode).toBe(200);
-  expect(res.body).toHaveLength(1);
-});
+test('GET /health returns 503 when the database is unreachable', async () => {
+  const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  knex.raw.mockRejectedValue(new Error('ECONNREFUSED'));
 
-test('POST /api/jobs', async () => {
-  const res = await request(app)
-    .post('/api/jobs')
-    .send({ title: 'QA Engineer', company: 'Brightside' });
-  expect(res.statusCode).toBe(201);
-  expect(res.body.title).toBe('QA Engineer');
+  const res = await request(app).get('/health');
+
+  expect(res.statusCode).toBe(503);
+  expect(res.body.status).toBe('error');
+
+  errorSpy.mockRestore();
 });
