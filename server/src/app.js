@@ -1,5 +1,7 @@
 const express = require('express');
 const knex = require('./db/knex');
+const usersRouter = require('./routes/users');
+const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 app.use(express.json());
@@ -13,5 +15,10 @@ app.get('/health', async (req, res) => {
     res.status(503).json({ status: 'error', db: 'unreachable' });
   }
 });
+
+app.use('/users', usersRouter);
+
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;
