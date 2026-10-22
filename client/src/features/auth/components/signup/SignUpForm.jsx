@@ -1,17 +1,58 @@
+import { useState } from "react";
 import Button from "@/components/Button";
 import FormField from "@/components/FormField";
 import Input from "@/components/Input";
 import TextLink from "@/components/TextLink";
 import PasswordInput from "../PasswordInput";
+import { signUpValidators } from "../../utils/authValidation";
 
-// UI only. To preview the error state, pass messages in, e.g.
-// <SignUpForm errors={{ name: "Enter your name." }} />
-export default function SignUpForm({ errors = {} }) {
-  // Stops the page from reloading until a real submit handler exists.
-  const handleSubmit = (event) => event.preventDefault();
+export default function SignUpForm() {
+  const [errors, setErrors] = useState({});
+
+  // Inputs stay uncontrolled, so typing never re-renders the form.
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+
+    const nextErrors = {};
+    for (const [name, validate] of Object.entries(signUpValidators)) {
+      const message = validate(String(data.get(name) ?? ""));
+      if (message) nextErrors[name] = message;
+    }
+
+    setErrors(nextErrors);
+
+    const firstInvalid = Object.keys(nextErrors)[0];
+    if (firstInvalid) {
+      form.elements[firstInvalid]?.focus();
+      return;
+    }
+
+    // TODO: call real sign-up request here.
+  };
+
+  // Only touches state when a field that currently has an error becomes valid.
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    const validate = signUpValidators[name];
+    if (!validate) return;
+
+    setErrors((prev) => {
+      if (!prev[name] || validate(value)) return prev; // same ref = no re-render
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6.5">
+    <form
+      onSubmit={handleSubmit}
+      onChange={handleChange}
+      noValidate
+      className="mt-6.5"
+    >
       <div className="space-y-4.5">
         <FormField id="name" label="Name" error={errors.name}>
           <Input
@@ -50,7 +91,6 @@ export default function SignUpForm({ errors = {} }) {
             id="password"
             name="password"
             autoComplete="new-password"
-            minLength={8}
             maxLength={128}
             required
             aria-describedby="password-hint"
