@@ -14,7 +14,7 @@ export default function ForgotPasswordForm({
 }) {
   return (
     <div>
-      <BackLink to="/signin">Back to log in</BackLink>
+      <BackLink to="/login">Back to log in</BackLink>
 
       <h1 className="font-serif text-[clamp(2rem,3.4vw,2.6rem)] leading-[1.08] tracking-tight">
         Forgot your password?
