@@ -109,7 +109,7 @@ describe('POST /users', () => {
       .send('{"name": ');
 
     expect(res.statusCode).toBe(400);
-    expect(res.body.error).toBe('invalid_json');
+    expect(res.body.error).toBe('invalid_json');  
   });
 
   test('returns a generic 500 for unexpected errors without leaking details', async () => {
