@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Button from "@/components/Button";
 import FormField from "@/components/FormField";
 import Input from "@/components/Input";
 import TextLink from "@/components/TextLink";
 import PasswordInput from "../PasswordInput";
 import { signInValidators } from "../../utils/authValidation";
+import { useAuth } from "../../context/useAuth";
+import { getApiError } from "@/lib/api";
 
 function FieldError({ id, message }) {
   if (!message) return null;
@@ -15,13 +18,19 @@ function FieldError({ id, message }) {
   );
 }
 
-// `invalid` is the server-level state (e.g. "Email or password is incorrect").
-export default function SignInForm({ invalid = false }) {
+// `status` and `onStatusChange` are owned by SignInPage so the banner above the form can react.
+export default function SignInForm({ status, onStatusChange }) {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  // Inputs stay uncontrolled, so typing never re-renders the form.
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    if (submitting) return;
+
     const form = event.currentTarget;
     const data = new FormData(form);
 
@@ -32,6 +41,8 @@ export default function SignInForm({ invalid = false }) {
     }
 
     setErrors(nextErrors);
+    setFormError("");
+    onStatusChange(null);
 
     const firstInvalid = Object.keys(nextErrors)[0];
     if (firstInvalid) {
@@ -39,23 +50,43 @@ export default function SignInForm({ invalid = false }) {
       return;
     }
 
-    // TODO: call real sign-in request here.
+    setSubmitting(true);
+    try {
+      await login({
+        email: String(data.get("email")),
+        password: String(data.get("password")),
+      });
+      navigate(location.state?.from?.pathname ?? "/dashboard", { replace: true });
+    } catch (err) {
+      const { code, message, fields } = getApiError(err);
+
+      if (code === "invalid_credentials") {
+        onStatusChange("error");
+      } else if (code === "too_many_attempts") {
+        onStatusChange("locked");
+      } else if (Object.keys(fields).length > 0) {
+        setErrors(fields);
+      } else {
+        setFormError(message);
+      }
+      setSubmitting(false);
+    }
   };
 
-  // Change events bubble to the form. State only updates when an
-  // existing error becomes valid, so most keystrokes cause no re-render.
   const handleChange = (event) => {
-  const { name, value } = event.target;
-  const validate = signInValidators[name];
-  if (!validate) return;
+    const { name, value } = event.target;
+    const validate = signInValidators[name];
+    if (!validate) return;
 
-  setErrors((prev) => {
-    if (!prev[name] || validate(value)) return prev; // same ref = no re-render
+    setErrors((prev) => {
+      if (!prev[name] || validate(value)) return prev;
       const next = { ...prev };
       delete next[name];
       return next;
     });
   };
+
+  const invalid = status === "error";
 
   return (
     <form
@@ -100,9 +131,21 @@ export default function SignInForm({ invalid = false }) {
         </FormField>
       </div>
 
-      <Button type="submit" variant="primary" fullWidth className="mt-5.5">
-        Log in
+      <Button
+        type="submit"
+        variant="primary"
+        fullWidth
+        className="mt-5.5"
+        disabled={submitting}
+      >
+        {submitting ? "Logging in..." : "Log in"}
       </Button>
+
+      {formError && (
+        <p role="alert" className="mt-3 text-[13.5px] text-red-600">
+          {formError}
+        </p>
+      )}
     </form>
   );
 }

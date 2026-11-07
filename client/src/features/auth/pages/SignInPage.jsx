@@ -1,3 +1,4 @@
+import { useState } from "react";
 import AuthAltLinks from "../components/AuthAltLinks";
 import AuthHeader from "../components/AuthHeader";
 import AuthLayout from "../components/AuthLayout";
@@ -7,10 +8,10 @@ import SignInStatus from "../components/signin/SignInStatus";
 import SignInStory from "../components/signin/SignInStory";
 import SocialButtons from "../components/SocialButtons";
 
-// UI preview: set to "notice" | "error" | "locked" | "unverified" to see each banner.
-const status = null;
-
 export default function SignInPage() {
+
+  const [status, setStatus] = useState(null); // null | "error" | "locked"
+
   return (
     <AuthLayout
       story={<SignInStory />}
@@ -22,7 +23,7 @@ export default function SignInPage() {
       />
 
       <SignInStatus status={status} />
-      <SignInForm invalid={status === "error"} />
+      <SignInForm status={status} onStatusChange={setStatus} />
 
       <OrDivider />
       <SocialButtons />

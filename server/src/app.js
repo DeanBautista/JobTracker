@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const knex = require('./db/knex');
 const usersRouter = require('./routes/users');
+const cookieParser = require('cookie-parser');
+const authRouter = require('./routes/auth');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -13,6 +15,7 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(cookieParser());
 
 app.get('/health', async (req, res) => {
   try {
@@ -25,6 +28,7 @@ app.get('/health', async (req, res) => {
 });
 
 app.use('/users', usersRouter);
+app.use('/auth', authRouter);
 
 app.use(notFound);
 app.use(errorHandler);
