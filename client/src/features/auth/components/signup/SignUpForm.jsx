@@ -1,17 +1,25 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Button from "@/components/Button";
 import FormField from "@/components/FormField";
 import Input from "@/components/Input";
 import TextLink from "@/components/TextLink";
 import PasswordInput from "../PasswordInput";
 import { signUpValidators } from "../../utils/authValidation";
+import { register } from "../../api/authApi";
+import { getApiError } from "@/lib/api";
 
 export default function SignUpForm() {
+  const navigate = useNavigate();
   const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   // Inputs stay uncontrolled, so typing never re-renders the form.
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    if (submitting) return;
+
     const form = event.currentTarget;
     const data = new FormData(form);
 
@@ -22,6 +30,7 @@ export default function SignUpForm() {
     }
 
     setErrors(nextErrors);
+    setFormError("");
 
     const firstInvalid = Object.keys(nextErrors)[0];
     if (firstInvalid) {
@@ -29,7 +38,28 @@ export default function SignUpForm() {
       return;
     }
 
-    // TODO: call real sign-up request here.
+    setSubmitting(true);
+    try {
+      await register({
+        name: String(data.get("name")),
+        email: String(data.get("email")),
+        password: String(data.get("password")),
+      });
+      navigate("/login"); // adjust to your sign-in route
+    } catch (err) {
+      const { code, message, fields } = getApiError(err);
+
+      if (code === "email_taken") {
+        setErrors({ email: message });
+        form.elements.email?.focus();
+      } else if (Object.keys(fields).length > 0) {
+        setErrors(fields);
+      } else {
+        setFormError(message);
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Only touches state when a field that currently has an error becomes valid.
@@ -99,9 +129,21 @@ export default function SignUpForm() {
         </FormField>
       </div>
 
-      <Button type="submit" variant="primary" fullWidth className="mt-5.5">
-        Create account
+      <Button
+        type="submit"
+        variant="primary"
+        fullWidth
+        className="mt-5.5"
+        disabled={submitting}
+      >
+        {submitting ? "Creating account..." : "Create account"}
       </Button>
+
+      {formError && (
+        <p role="alert" className="mt-3 text-[13.5px] text-red-600">
+          {formError}
+        </p>
+      )}
 
       <p className="mt-4 text-[13.5px] text-muted">
         By creating an account you agree to the{" "}

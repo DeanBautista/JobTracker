@@ -12,7 +12,7 @@ export default function AuthLayout({ story, storyNote, topAction, children }) {
         Skip to content
       </a>
 
-      <div className="grid min-h-screen min-[900px]:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+      <div className="grid h-dvh grid-rows-[minmax(0,1fr)] min-[900px]:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
         {/* Story panel */}
         <aside className="hidden flex-col justify-between gap-12 bg-ink px-story-gutter py-9 text-on-ink min-[900px]:flex">
           <Brand />
@@ -23,7 +23,7 @@ export default function AuthLayout({ story, storyNote, topAction, children }) {
         </aside>
 
         {/* Form panel */}
-        <div className="flex min-w-0 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-col">
           <div className="flex items-center justify-between gap-4 px-gutter pt-7 text-[14.5px] text-muted">
             <Brand className="text-ink min-[900px]:hidden" />
             <span className="ml-auto">{topAction}</span>
@@ -31,9 +31,11 @@ export default function AuthLayout({ story, storyNote, topAction, children }) {
 
           <main
             id="main"
-            className="flex flex-1 items-start justify-center px-gutter pb-8 pt-9 min-[900px]:items-center min-[900px]:pt-8"
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto px-gutter pb-8 pt-9 min-[900px]:pt-8"
           >
-            <div className="w-full max-w-[400px]">{children}</div>
+            <div className="mx-auto w-full max-w-[400px] min-[900px]:my-auto">
+              {children}
+            </div>
           </main>
 
           <footer className="flex flex-wrap gap-x-6 gap-y-2 px-gutter pb-7 text-[13.5px] text-muted">
