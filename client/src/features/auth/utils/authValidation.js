@@ -20,9 +20,14 @@ export function validateName(value) {
   return "";
 }
 
+// Login only checks that a password was typed. The length rule belongs to signup.
+export function validateLoginPassword(value) {
+  return value ? "" : "Password is required.";
+}
+
 export const signInValidators = {
   email: validateEmail,
-  password: validatePassword,
+  password: validateLoginPassword,
 };
 
 export const signUpValidators = {
@@ -30,3 +35,5 @@ export const signUpValidators = {
   email: validateEmail,
   password: validatePassword,
 };
+
+

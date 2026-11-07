@@ -20,6 +20,14 @@ class AppError extends Error {
   static conflict(code, message) {
     return new AppError(409, code, message);
   }
+
+  static unauthorized(code = 'unauthorized', message = 'Authentication required') {
+    return new AppError(401, code, message);
+  }
+
+  static tooManyRequests(code = 'too_many_attempts', message = 'Too many attempts. Try again later.') {
+    return new AppError(429, code, message);
+  }
 }
 
 module.exports = AppError;

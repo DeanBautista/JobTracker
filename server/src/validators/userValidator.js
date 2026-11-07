@@ -37,4 +37,17 @@ function validateCreateUser({ name, email, password } = {}) {
   }
 }
 
-module.exports = { validateCreateUser, isValidEmail, passwordError };
+function validateLogin({ email, password } = {}) {
+  const errors = {};
+
+  if (!isValidEmail(email)) errors.email = 'a valid email is required';
+  if (typeof password !== 'string' || password === '') {
+    errors.password = 'password is required';
+  }
+
+  if (Object.keys(errors).length) {
+    throw AppError.badRequest('validation_failed', 'Invalid input', errors);
+  }
+}
+
+module.exports = { validateCreateUser, validateLogin, isValidEmail, passwordError };
