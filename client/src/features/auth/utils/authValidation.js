@@ -25,6 +25,14 @@ export function validateLoginPassword(value) {
   return value ? "" : "Password is required.";
 }
 
+export function validateNewPassword(value) {
+  return value.length < 8 ? "Use at least 8 characters." : "";
+}
+
+export function validateConfirmPassword(password, confirm) {
+  return password !== confirm ? "Passwords do not match." : "";
+}
+
 export const signInValidators = {
   email: validateEmail,
   password: validateLoginPassword,
@@ -35,5 +43,3 @@ export const signUpValidators = {
   email: validateEmail,
   password: validatePassword,
 };
-
-
