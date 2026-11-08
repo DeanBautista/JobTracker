@@ -63,19 +63,26 @@ async function create({
 
   let id;
   try {
-    [id] = await knex('users').insert({
-      name: name.trim(),
-      email: email.trim().toLowerCase(), // emails are stored lowercase
-      password_hash,
-      email_verified_at: null,
-      avatar_url: optionalText(avatar_url),
-      target_role: optionalText(target_role),
-      home_location: optionalText(home_location),
-      is_demo: false,
-      failed_logins: 0,
-      locked_until: null,
-      created_at: now,
-      updated_at: now,
+    id = await knex.transaction(async (trx) => {
+      const [userId] = await trx('users').insert({
+        name: name.trim(),
+        email: email.trim().toLowerCase(), // emails are stored lowercase
+        password_hash,
+        email_verified_at: null,
+        avatar_url: optionalText(avatar_url),
+        target_role: optionalText(target_role),
+        home_location: optionalText(home_location),
+        is_demo: false,
+        failed_logins: 0,
+        locked_until: null,
+        created_at: now,
+        updated_at: now,
+      });
+
+      // Only user_id is required since the other columns have default values.
+      await trx('user_settings').insert({ user_id: userId });
+
+      return userId;
     });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
