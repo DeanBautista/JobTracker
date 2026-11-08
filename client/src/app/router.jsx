@@ -18,7 +18,7 @@ const router = createBrowserRouter([
       { path: "/login", element: <SignInPage /> },
       { path: "/forgot-password", element: <ForgotPasswordPage /> },
       { path: "/reset-password", element: <ResetPasswordPage />},
-      { path: "/verify-email", element: <VerifyEmailPage  swordPage />},
+      { path: "/verify-email", element: <VerifyEmailPage />},
     ],
   },
   {
