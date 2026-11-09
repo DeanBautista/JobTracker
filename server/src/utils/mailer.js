@@ -42,4 +42,19 @@ async function sendVerificationEmail({ to, name, token }) {
   });
 }
 
-module.exports = { sendVerificationEmail };
+async function sendPasswordResetEmail({ to, name, token }) {
+  const link = `${CLIENT_URL}/reset-password?token=${token}`;
+  if (!process.env.BREVO_API_KEY) console.log(`[mail:dev] reset link: ${link}`);
+
+  await sendMail({
+    to,
+    subject: 'Reset your Job Tracker password',
+    html: `
+      <p>Hi ${escapeHtml(name)},</p>
+      <p>We got a request to reset your password. This link works for 30 minutes.</p>
+      <p><a href="${link}">Reset my password</a></p>
+      <p>If you didn't ask for this, you can ignore this email. Your password won't change.</p>`,
+  });
+}
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail };

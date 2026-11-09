@@ -6,6 +6,8 @@ const {
   me,
   verifyEmail,
   resendVerification,
+  forgotPassword,
+  resetPassword
 } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/auth');
 
@@ -17,5 +19,7 @@ router.post('/logout', logout);
 router.get('/me', requireAuth, me);
 router.post('/verify-email', verifyEmail);
 router.post('/resend-verification', resendVerification);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 module.exports = router;

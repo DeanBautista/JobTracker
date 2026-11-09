@@ -9,6 +9,7 @@ export default function ForgotPasswordForm({
   email,
   onEmailChange,
   onSubmit,
+  isSubmitting = false,
   isRateLimited = false,
   error = "",
 }) {
@@ -48,19 +49,19 @@ export default function ForgotPasswordForm({
           />
         </FormField>
 
-        <Button type="submit" fullWidth className="mt-5.5">
-          Send reset link
+        <Button type="submit" fullWidth className="mt-5.5" disabled={isSubmitting}>
+          {isSubmitting ? "Sending…" : "Send reset link"}
         </Button>
       </form>
 
       <div className="mt-6.5 grid gap-2 border-t border-rule pt-5.5 text-[14.5px]">
         <p>
           <span className="text-muted">Remembered it?</span>{" "}
-          <TextLink to="/signin">Log in</TextLink>
+          <TextLink to="/login">Log in</TextLink>
         </p>
         <p>
           <span className="text-muted">Wrong email, or new here?</span>{" "}
-          <TextLink to="/signup">Create a free account</TextLink>
+          <TextLink to="/register">Create a free account</TextLink>
         </p>
       </div>
     </div>

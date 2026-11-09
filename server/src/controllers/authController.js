@@ -2,7 +2,11 @@ const bcrypt = require('bcryptjs');
 const AppError = require('../utils/AppError');
 const userModel = require('../models/userModel');
 const sessionModel = require('../models/sessionModel');
-const { validateLogin } = require('../validators/userValidator');
+const {
+  validateLogin,
+  validateForgotPassword,
+  validateNewPassword,
+} = require('../validators/userValidator');
 const {
   REFRESH_TTL_MS,
   signAccessToken,
@@ -10,7 +14,7 @@ const {
   hashToken,
 } = require('../utils/tokens');
 const userTokenModel = require('../models/userTokenModel');
-const { sendVerificationEmail } = require('../utils/mailer');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/mailer');
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -151,4 +155,42 @@ const resendVerification = async (req, res) => {
   res.status(204).end();
 };
 
-module.exports = { login, refresh, logout, me, verifyEmail, resendVerification };
+// POST /auth/forgot-password  { email }
+// Always answers 204, so it can't be used to find out which emails are registered.
+const forgotPassword = async (req, res) => {
+  const body = req.body || {};
+  validateForgotPassword(body);
+
+  const user = await userModel.findByEmail(body.email);
+  if (user && !(await userTokenModel.sentRecently(user.id, RESEND_COOLDOWN_SECONDS, 'reset_password'))) {
+    try {
+      await userTokenModel.invalidateResetTokens(user.id);
+      const token = await userTokenModel.createResetToken(user.id);
+      await sendPasswordResetEmail({ to: user.email, name: user.name, token });
+    } catch (err) {
+      // Logged, not returned: an error here would reveal that the account exists.
+      console.error('Failed to send password reset email:', err);
+    }
+  }
+  res.status(204).end();
+};
+
+// POST /auth/reset-password  { token, password }
+const resetPassword = async (req, res) => {
+  const { token, password } = req.body || {};
+  if (typeof token !== 'string' || !token) {
+    throw AppError.badRequest('invalid_token', 'This link no longer works');
+  }
+  validateNewPassword({ password }); // a weak password doesn't use up the token
+
+  const passwordHash = await userModel.hashPassword(password);
+  const userId = await userTokenModel.resetPassword(token, passwordHash);
+  if (!userId) throw AppError.badRequest('invalid_token', 'This link no longer works');
+
+  res.clearCookie(COOKIE_NAME, cookieOptions);
+  res.status(204).end();
+};
+
+module.exports = {
+  login, refresh, logout, me, verifyEmail, resendVerification, forgotPassword, resetPassword,
+};
