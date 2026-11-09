@@ -30,3 +30,11 @@ export async function verifyEmail(token) {
 export async function resendVerification(email) {
   await api.post("/auth/resend-verification", { email }, { skipAuthRefresh: true });
 }
+
+export async function forgotPassword(email) {
+  await api.post("/auth/forgot-password", { email }, { skipAuthRefresh: true });
+}
+
+export async function resetPassword({ token, password }) {
+  await api.post("/auth/reset-password", { token, password }, { skipAuthRefresh: true });
+}

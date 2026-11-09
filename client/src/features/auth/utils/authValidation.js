@@ -26,7 +26,9 @@ export function validateLoginPassword(value) {
 }
 
 export function validateNewPassword(value) {
-  return value.length < 8 ? "Use at least 8 characters." : "";
+  if (value.length < 8) return "Use at least 8 characters.";
+  if (new TextEncoder().encode(value).length > 72) return "Use at most 72 bytes.";
+  return "";
 }
 
 export function validateConfirmPassword(password, confirm) {

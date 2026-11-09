@@ -36,13 +36,38 @@ jest.mock('./models/sessionModel', () => ({
   revoke: jest.fn(),
 }));
 
+jest.mock('./models/userModel', () => ({
+  create: jest.fn(),
+  findById: jest.fn(),
+  findByEmail: jest.fn(),
+  findAuthByEmail: jest.fn(),
+  hashPassword: jest.fn(),
+  recordFailedLogin: jest.fn(),
+  clearFailedLogins: jest.fn(),
+}));
+
+jest.mock('./models/userTokenModel', () => ({
+  createVerifyToken: jest.fn(),
+  createResetToken: jest.fn(),
+  sentRecently: jest.fn(),
+  invalidateVerifyTokens: jest.fn(),
+  invalidateResetTokens: jest.fn(),
+  verifyEmail: jest.fn(),
+  resetPassword: jest.fn(),
+}));
+
+jest.mock('./utils/mailer', () => ({
+  sendVerificationEmail: jest.fn(),
+  sendPasswordResetEmail: jest.fn(),
+}));
+
 const knex = require('./db/knex');
 const userModel = require('./models/userModel');
 const sessionModel = require('./models/sessionModel');
 const AppError = require('./utils/AppError');
 const { signAccessToken } = require('./utils/tokens');
 const userTokenModel = require('./models/userTokenModel');
-const { sendVerificationEmail } = require('./utils/mailer');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('./utils/mailer');
 const app = require('./app');
 
 // Clears calls AND implementations, so each test sets up exactly what it needs.
@@ -625,6 +650,125 @@ describe('POST /auth/resend-verification', () => {
       name: 'Tamaki',
       token: 'new-token',
     });
+  });
+});
+
+describe('POST /auth/forgot-password', () => {
+  const user = { id: 147, name: 'Tamaki', email: 'tamaki@gmail.com' };
+
+  test('returns 400 for an invalid email', async () => {
+    const res = await request(app).post('/auth/forgot-password').send({ email: 'nope' });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('validation_failed');
+  });
+
+  test('answers 204 without sending for an unknown email', async () => {
+    userModel.findByEmail.mockResolvedValue(undefined);
+
+    const res = await request(app)
+      .post('/auth/forgot-password')
+      .send({ email: 'nobody@example.com' });
+
+    expect(res.statusCode).toBe(204);
+    expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+
+  test('answers 204 without sending during the cooldown', async () => {
+    userModel.findByEmail.mockResolvedValue(user);
+    userTokenModel.sentRecently.mockResolvedValue(true);
+
+    const res = await request(app)
+      .post('/auth/forgot-password')
+      .send({ email: 'tamaki@gmail.com' });
+
+    expect(res.statusCode).toBe(204);
+    expect(userTokenModel.sentRecently).toHaveBeenCalledWith(147, 60, 'reset_password');
+    expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+
+  test('invalidates old links and emails a new one', async () => {
+    userModel.findByEmail.mockResolvedValue(user);
+    userTokenModel.sentRecently.mockResolvedValue(false);
+    userTokenModel.createResetToken.mockResolvedValue('reset-token');
+
+    const res = await request(app)
+      .post('/auth/forgot-password')
+      .send({ email: 'tamaki@gmail.com' });
+
+    expect(res.statusCode).toBe(204);
+    expect(userTokenModel.invalidateResetTokens).toHaveBeenCalledWith(147);
+    expect(sendPasswordResetEmail).toHaveBeenCalledWith({
+      to: 'tamaki@gmail.com',
+      name: 'Tamaki',
+      token: 'reset-token',
+    });
+  });
+
+  test('still answers 204 when the email fails to send', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    userModel.findByEmail.mockResolvedValue(user);
+    userTokenModel.sentRecently.mockResolvedValue(false);
+    userTokenModel.createResetToken.mockResolvedValue('reset-token');
+    sendPasswordResetEmail.mockRejectedValue(new Error('Brevo down'));
+
+    const res = await request(app)
+      .post('/auth/forgot-password')
+      .send({ email: 'tamaki@gmail.com' });
+
+    expect(res.statusCode).toBe(204);
+    errorSpy.mockRestore();
+  });
+});
+
+describe('POST /auth/reset-password', () => {
+  test('returns 400 invalid_token when the token is missing', async () => {
+    const res = await request(app)
+      .post('/auth/reset-password')
+      .send({ password: 'new-password-1' });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('invalid_token');
+    expect(userTokenModel.resetPassword).not.toHaveBeenCalled();
+  });
+
+  test('returns 400 with field details for a weak password, without using the token', async () => {
+    const res = await request(app)
+      .post('/auth/reset-password')
+      .send({ token: 'good-token', password: 'short' });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('validation_failed');
+    expect(res.body.fields.password).toBeDefined();
+    expect(userTokenModel.resetPassword).not.toHaveBeenCalled();
+  });
+
+  test('returns 400 invalid_token for an unknown, used or expired token', async () => {
+    userModel.hashPassword.mockResolvedValue('new-hash');
+    userTokenModel.resetPassword.mockResolvedValue(null);
+
+    const res = await request(app)
+      .post('/auth/reset-password')
+      .send({ token: 'bad-token', password: 'new-password-1' });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('invalid_token');
+  });
+
+  test('resets the password, clears the refresh cookie, and does not sign in', async () => {
+    userModel.hashPassword.mockResolvedValue('new-hash');
+    userTokenModel.resetPassword.mockResolvedValue(147);
+
+    const res = await request(app)
+      .post('/auth/reset-password')
+      .set('Cookie', 'refresh_token=abc')
+      .send({ token: 'good-token', password: 'new-password-1' });
+
+    expect(res.statusCode).toBe(204);
+    expect(userModel.hashPassword).toHaveBeenCalledWith('new-password-1');
+    expect(userTokenModel.resetPassword).toHaveBeenCalledWith('good-token', 'new-hash');
+    expect(res.headers['set-cookie'][0]).toContain('refresh_token=;');
+    expect(sessionModel.create).not.toHaveBeenCalled();
   });
 });
 

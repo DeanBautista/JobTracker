@@ -15,6 +15,7 @@ const router = createBrowserRouter([
   // Outside GuestRoute on purpose: verifying signs the user in, and GuestRoute
   // would redirect them to the dashboard before the success screen shows.
   { path: "/verify-email", element: <VerifyEmailPage /> },
+  { path: "/reset-password", element: <ResetPasswordPage /> },
 
   {
     element: <GuestRoute />,
@@ -22,7 +23,6 @@ const router = createBrowserRouter([
       { path: "/register", element: <SignUpPage /> },
       { path: "/login", element: <SignInPage /> },
       { path: "/forgot-password", element: <ForgotPasswordPage /> },
-      { path: "/reset-password", element: <ResetPasswordPage /> },
     ],
   },
   {

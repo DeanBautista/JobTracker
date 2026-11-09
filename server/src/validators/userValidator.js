@@ -50,4 +50,28 @@ function validateLogin({ email, password } = {}) {
   }
 }
 
-module.exports = { validateCreateUser, validateLogin, isValidEmail, passwordError };
+// Used by forgot-password. Throws 400 if the email isn't valid.
+function validateForgotPassword({ email } = {}) {
+  if (!isValidEmail(email)) {
+    throw AppError.badRequest('validation_failed', 'Invalid input', {
+      email: 'a valid email is required',
+    });
+  }
+}
+
+// Used by reset-password. The token is checked separately in the controller.
+function validateNewPassword({ password } = {}) {
+  const pwError = passwordError(password);
+  if (pwError) {
+    throw AppError.badRequest('validation_failed', 'Invalid input', { password: pwError });
+  }
+}
+
+module.exports = {
+  validateCreateUser,
+  validateLogin,
+  validateForgotPassword,
+  validateNewPassword,
+  isValidEmail,
+  passwordError,
+};

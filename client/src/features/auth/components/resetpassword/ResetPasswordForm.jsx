@@ -1,3 +1,6 @@
+import { useNavigate } from "react-router-dom";
+import * as authApi from "@/features/auth/api/authApi";
+import { getApiError } from "@/lib/api";
 import { useState } from "react";
 import Input from "@/components/Input";
 import AuthHeader from "@/features/auth/components/AuthHeader";
@@ -6,13 +9,17 @@ import {
   validateConfirmPassword,
 } from "@/features/auth/utils/authValidation";
 
-export default function ResetPasswordForm({ token }) {
+export default function ResetPasswordForm({ token, onInvalidToken }) {
+  const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    const form = event.currentTarget;
 
     const next = {
       password: validateNewPassword(password),
@@ -22,11 +29,22 @@ export default function ResetPasswordForm({ token }) {
 
     const firstInvalid = next.password ? "password" : next.confirm ? "confirm" : null;
     if (firstInvalid) {
-      event.currentTarget.elements[firstInvalid]?.focus();
+      form.elements[firstInvalid]?.focus();
       return;
     }
 
-    // TODO: POST /reset-password with { token, password }
+    setFormError("");
+    setIsSubmitting(true);
+    try {
+      await authApi.resetPassword({ token, password });
+      navigate("/login", { replace: true, state: { passwordReset: true } });
+    } catch (err) {
+      const apiError = getApiError(err);
+      if (apiError.code === "invalid_token") onInvalidToken();
+      else if (apiError.fields?.password) setErrors({ password: apiError.fields.password });
+      else setFormError(apiError.message);
+      setIsSubmitting(false);
+    }
   };
 
   // Clears an error as soon as the typed value becomes valid.
@@ -82,11 +100,18 @@ export default function ResetPasswordForm({ token }) {
           />
         </Field>
 
+        {formError && (
+          <p role="alert" className="text-[14px] text-danger">
+            {formError}
+          </p>
+        )}
+
         <button
           type="submit"
-          className="inline-flex min-h-11 items-center justify-center rounded-md border border-ink bg-ink px-4 text-sm font-medium text-on-ink transition-colors hover:border-accent hover:bg-accent hover:text-on-ink"
+          disabled={isSubmitting}
+          className="... (keep your existing classes) disabled:opacity-60"
         >
-          Save new password
+          {isSubmitting ? "Saving…" : "Save new password"}
         </button>
       </form>
     </>

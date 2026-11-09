@@ -21,6 +21,8 @@ const SAFE_COLUMNS = [
   'updated_at',
 ];
 
+const hashPassword = (password) => bcrypt.hash(password, BCRYPT_ROUNDS);
+
 const optionalText = (v) =>
   typeof v === 'string' && v.trim() !== '' ? v.trim() : null;
 
@@ -58,7 +60,7 @@ async function create({
   target_role,
   home_location,
 }) {
-  const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const password_hash = await hashPassword(password);
   const now = knex.fn.now();
 
   let id;
@@ -120,4 +122,5 @@ module.exports = {
   create,
   recordFailedLogin,
   clearFailedLogins,
+  hashPassword
 };

@@ -1,6 +1,12 @@
 import Button from "@/components/Button";
 
-export default function ForgotPasswordSent({ email, onResend, onChangeEmail }) {
+export default function ForgotPasswordSent({
+  email,
+  cooldown = 0,
+  isSending = false,
+  onResend,
+  onChangeEmail,
+}) {
   return (
     <section role="status" aria-labelledby="sent-title">
       <div className="mb-5 grid size-13 place-items-center rounded-full border border-ink">
@@ -28,9 +34,14 @@ export default function ForgotPasswordSent({ email, onResend, onChangeEmail }) {
       </p>
 
       <div className="mt-5.5 flex flex-wrap items-center gap-x-4 gap-y-2.5">
-        <Button to="/signin">Back to log in</Button>
-        <Button variant="outline" type="button" onClick={onResend}>
-          Send again
+        <Button to="/login">Back to log in</Button>
+        <Button
+          variant="outline"
+          type="button"
+          onClick={onResend}
+          disabled={cooldown > 0 || isSending}
+        >
+          {cooldown > 0 ? `Send again in ${cooldown}s` : "Send again"}
         </Button>
       </div>
 

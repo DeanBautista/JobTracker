@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import AuthLayout from "@/features/auth/components/AuthLayout";
 import ResetPasswordForm from "@/features/auth/components/resetpassword/ResetPasswordForm";
@@ -9,6 +10,7 @@ import ResetPasswordStory from "@/features/auth/components/resetpassword/ResetPa
 export default function ResetPasswordPage() {
   const [params] = useSearchParams();
   const token = params.get("token");
+  const [invalid, setInvalid] = useState(false);
 
   return (
     <AuthLayout story={<ResetPasswordStory />} storyNote="Sample data">
@@ -19,7 +21,11 @@ export default function ResetPasswordPage() {
         Back to log in
       </Link>
 
-      {token ? <ResetPasswordForm token={token} /> : <InvalidResetLink />}
+      {token && !invalid ? (
+        <ResetPasswordForm token={token} onInvalidToken={() => setInvalid(true)} />
+      ) : (
+        <InvalidResetLink />
+      )}
     </AuthLayout>
   );
 }
