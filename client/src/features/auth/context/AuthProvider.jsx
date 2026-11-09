@@ -51,10 +51,19 @@ export default function AuthProvider({ children }) {
     }
   }, []);
 
+  const verifyEmail = useCallback(async (token) => {
+    const { accessToken, user } = await authApi.verifyEmail(token);
+    setAccessToken(accessToken);
+    setUser(user);
+    setStatus("authenticated");
+    return user;
+  }, []);
+
   const value = useMemo(
-    () => ({ user, status, login, logout }),
-    [user, status, login, logout]
+    () => ({ user, status, login, logout, verifyEmail }),
+    [user, status, login, logout, verifyEmail]
   );
+  
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

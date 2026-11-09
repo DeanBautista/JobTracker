@@ -12,9 +12,21 @@ jest.mock('./db/knex', () => ({
 jest.mock('./models/userModel', () => ({
   create: jest.fn(),
   findById: jest.fn(),
+  findByEmail: jest.fn(),
   findAuthByEmail: jest.fn(),
   recordFailedLogin: jest.fn(),
   clearFailedLogins: jest.fn(),
+}));
+
+jest.mock('./models/userTokenModel', () => ({
+  createVerifyToken: jest.fn(),
+  sentRecently: jest.fn(),
+  invalidateVerifyTokens: jest.fn(),
+  verifyEmail: jest.fn(),
+}));
+
+jest.mock('./utils/mailer', () => ({
+  sendVerificationEmail: jest.fn(),
 }));
 
 jest.mock('./models/sessionModel', () => ({
@@ -29,6 +41,8 @@ const userModel = require('./models/userModel');
 const sessionModel = require('./models/sessionModel');
 const AppError = require('./utils/AppError');
 const { signAccessToken } = require('./utils/tokens');
+const userTokenModel = require('./models/userTokenModel');
+const { sendVerificationEmail } = require('./utils/mailer');
 const app = require('./app');
 
 // Clears calls AND implementations, so each test sets up exactly what it needs.
@@ -144,6 +158,33 @@ describe('POST /users', () => {
 
     errorSpy.mockRestore();
   });
+
+  test('sends a verification email after creating the user', async () => {
+    const created = { id: 1, name: 'Ana Cruz', email: 'ana@example.com' };
+    userModel.create.mockResolvedValue(created);
+    userTokenModel.createVerifyToken.mockResolvedValue('raw-token');
+
+    await request(app).post('/users').send(validBody);
+
+    expect(userTokenModel.createVerifyToken).toHaveBeenCalledWith(1);
+    expect(sendVerificationEmail).toHaveBeenCalledWith({
+      to: 'ana@example.com',
+      name: 'Ana Cruz',
+      token: 'raw-token',
+    });
+  });
+
+  test('still returns 201 when the verification email fails', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    userModel.create.mockResolvedValue({ id: 1, name: 'Ana Cruz', email: 'ana@example.com' });
+    userTokenModel.createVerifyToken.mockResolvedValue('raw-token');
+    sendVerificationEmail.mockRejectedValue(new Error('Brevo down'));
+
+    const res = await request(app).post('/users').send(validBody);
+
+    expect(res.statusCode).toBe(201);
+    errorSpy.mockRestore();
+  });
 });
 
 describe('POST /auth/login', () => {
@@ -155,6 +196,7 @@ describe('POST /auth/login', () => {
     name: 'Tamaki',
     email: 'tamaki@gmail.com',
     password_hash: HASH,
+    email_verified_at: new Date(),
     is_locked: 0,
     lock_expired: 0,
     ...overrides,
@@ -264,6 +306,30 @@ describe('POST /auth/login', () => {
     expect(stored.userId).toBe(147);
     expect(stored.tokenHash).toMatch(/^[0-9a-f]{64}$/);
     expect(cookie).not.toContain(stored.tokenHash);
+  });
+
+  test('returns 403 email_not_verified for the right password on an unverified account', async () => {
+    userModel.findAuthByEmail.mockResolvedValue(authUser({ email_verified_at: null }));
+
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ email: 'tamaki@gmail.com', password: PASSWORD });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('email_not_verified');
+    expect(sessionModel.create).not.toHaveBeenCalled();
+    expect(res.headers['set-cookie']).toBeUndefined();
+  });
+
+  test('does not reveal an unverified account to a wrong password', async () => {
+    userModel.findAuthByEmail.mockResolvedValue(authUser({ email_verified_at: null }));
+
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ email: 'tamaki@gmail.com', password: 'wrong-password' });
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body.code).toBe('invalid_credentials');
   });
 });
 
@@ -458,6 +524,107 @@ describe('POST /auth/logout', () => {
     expect(res.statusCode).toBe(204);
     expect(sessionModel.revoke).not.toHaveBeenCalled();
     expect(res.headers['set-cookie'][0]).toContain('refresh_token=;');
+  });
+});
+
+describe('POST /auth/verify-email', () => {
+  test('returns 400 invalid_token when the token is missing', async () => {
+    const res = await request(app).post('/auth/verify-email').send({});
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('invalid_token');
+    expect(userTokenModel.verifyEmail).not.toHaveBeenCalled();
+  });
+
+  test('returns 400 invalid_token for an unknown, used or expired token', async () => {
+    userTokenModel.verifyEmail.mockResolvedValue(null);
+
+    const res = await request(app).post('/auth/verify-email').send({ token: 'bad-token' });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('invalid_token');
+    expect(sessionModel.create).not.toHaveBeenCalled();
+    expect(res.headers['set-cookie']).toBeUndefined();
+  });
+
+  test('verifies the email and signs the user in', async () => {
+    const user = { id: 147, name: 'Tamaki', email: 'tamaki@gmail.com' };
+    userTokenModel.verifyEmail.mockResolvedValue(147);
+    userModel.findById.mockResolvedValue(user);
+
+    const res = await request(app).post('/auth/verify-email').send({ token: 'good-token' });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.user).toEqual(user);
+    const payload = jwt.verify(res.body.accessToken, process.env.ACCESS_TOKEN_SECRET);
+    expect(payload.sub).toBe('147');
+    expect(res.headers['set-cookie'][0]).toContain('HttpOnly');
+    expect(userTokenModel.verifyEmail).toHaveBeenCalledWith('good-token');
+    expect(sessionModel.create).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('POST /auth/resend-verification', () => {
+  const unverified = { id: 147, name: 'Tamaki', email: 'tamaki@gmail.com', email_verified_at: null };
+
+  test('returns 400 when the email is missing', async () => {
+    const res = await request(app).post('/auth/resend-verification').send({});
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('invalid_email');
+  });
+
+  test('answers 204 without sending for an unknown email', async () => {
+    userModel.findByEmail.mockResolvedValue(undefined);
+
+    const res = await request(app)
+      .post('/auth/resend-verification')
+      .send({ email: 'nobody@example.com' });
+
+    expect(res.statusCode).toBe(204);
+    expect(sendVerificationEmail).not.toHaveBeenCalled();
+  });
+
+  test('answers 204 without sending for an already verified account', async () => {
+    userModel.findByEmail.mockResolvedValue({ ...unverified, email_verified_at: new Date() });
+
+    const res = await request(app)
+      .post('/auth/resend-verification')
+      .send({ email: 'tamaki@gmail.com' });
+
+    expect(res.statusCode).toBe(204);
+    expect(sendVerificationEmail).not.toHaveBeenCalled();
+  });
+
+  test('answers 204 without sending during the cooldown', async () => {
+    userModel.findByEmail.mockResolvedValue(unverified);
+    userTokenModel.sentRecently.mockResolvedValue(true);
+
+    const res = await request(app)
+      .post('/auth/resend-verification')
+      .send({ email: 'tamaki@gmail.com' });
+
+    expect(res.statusCode).toBe(204);
+    expect(userTokenModel.invalidateVerifyTokens).not.toHaveBeenCalled();
+    expect(sendVerificationEmail).not.toHaveBeenCalled();
+  });
+
+  test('invalidates old links and sends a new one for an unverified account', async () => {
+    userModel.findByEmail.mockResolvedValue(unverified);
+    userTokenModel.sentRecently.mockResolvedValue(false);
+    userTokenModel.createVerifyToken.mockResolvedValue('new-token');
+
+    const res = await request(app)
+      .post('/auth/resend-verification')
+      .send({ email: 'tamaki@gmail.com' });
+
+    expect(res.statusCode).toBe(204);
+    expect(userTokenModel.invalidateVerifyTokens).toHaveBeenCalledWith(147);
+    expect(sendVerificationEmail).toHaveBeenCalledWith({
+      to: 'tamaki@gmail.com',
+      name: 'Tamaki',
+      token: 'new-token',
+    });
   });
 });
 

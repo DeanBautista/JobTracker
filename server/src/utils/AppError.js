@@ -28,6 +28,10 @@ class AppError extends Error {
   static tooManyRequests(code = 'too_many_attempts', message = 'Too many attempts. Try again later.') {
     return new AppError(429, code, message);
   }
+
+  static forbidden(code = 'forbidden', message = 'Not allowed') {
+    return new AppError(403, code, message);
+  }
 }
 
 module.exports = AppError;
