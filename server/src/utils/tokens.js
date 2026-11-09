@@ -16,6 +16,9 @@ const verifyAccessToken = (token) =>
 const generateRefreshToken = () => crypto.randomBytes(48).toString('hex');
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
+// token for email verification
+const generateToken = () => crypto.randomBytes(32).toString('hex');
+
 module.exports = {
-  REFRESH_TTL_MS, signAccessToken, verifyAccessToken, generateRefreshToken, hashToken,
+  REFRESH_TTL_MS, signAccessToken, verifyAccessToken, generateRefreshToken, generateToken, hashToken,
 };

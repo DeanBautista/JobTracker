@@ -9,6 +9,10 @@ const {
   generateRefreshToken,
   hashToken,
 } = require('../utils/tokens');
+const userTokenModel = require('../models/userTokenModel');
+const { sendVerificationEmail } = require('../utils/mailer');
+
+const RESEND_COOLDOWN_SECONDS = 60;
 
 const COOKIE_NAME = 'refresh_token';
 const cookieOptions = {
@@ -53,6 +57,11 @@ const login = async (req, res) => {
   }
 
   await userModel.clearFailedLogins(user.id);
+
+  if (!user.email_verified_at) {
+    throw AppError.forbidden('email_not_verified', 'Please verify your email before signing in');
+  }
+
   const accessToken = await startSession(req, res, user.id);
   res.json({ accessToken, user: await userModel.findById(user.id) });
 };
@@ -107,4 +116,39 @@ const me = async (req, res) => {
   res.json(user);
 };
 
-module.exports = { login, refresh, logout, me };
+// POST /auth/verify-email  { token }
+const verifyEmail = async (req, res) => {
+  const token = req.body?.token;
+  if (typeof token !== 'string' || !token) {
+    throw AppError.badRequest('invalid_token', 'This link no longer works');
+  }
+
+  const userId = await userTokenModel.verifyEmail(token);
+  if (!userId) throw AppError.badRequest('invalid_token', 'This link no longer works');
+
+  const accessToken = await startSession(req, res, userId);
+  res.json({ accessToken, user: await userModel.findById(userId) });
+};
+
+// POST /auth/resend-verification  { email }
+// Always answers 204 so it can't be used to find out which emails are registered.
+const resendVerification = async (req, res) => {
+  const email = req.body?.email;
+  if (typeof email !== 'string' || !email.trim()) {
+    throw AppError.badRequest('invalid_email', 'Email is required');
+  }
+
+  const user = await userModel.findByEmail(email);
+  if (
+    user &&
+    !user.email_verified_at &&
+    !(await userTokenModel.sentRecently(user.id, RESEND_COOLDOWN_SECONDS))
+  ) {
+    await userTokenModel.invalidateVerifyTokens(user.id);
+    const token = await userTokenModel.createVerifyToken(user.id);
+    await sendVerificationEmail({ to: user.email, name: user.name, token });
+  }
+  res.status(204).end();
+};
+
+module.exports = { login, refresh, logout, me, verifyEmail, resendVerification };
