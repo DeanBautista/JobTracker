@@ -17,3 +17,16 @@ export async function login({ email, password }) {
 export async function logout() {
   await api.post("/auth/logout", {}, { skipAuthRefresh: true });
 }
+
+export async function verifyEmail(token) {
+  const { data } = await api.post(
+    "/auth/verify-email",
+    { token },
+    { skipAuthRefresh: true }
+  );
+  return data; // { accessToken, user }
+}
+
+export async function resendVerification(email) {
+  await api.post("/auth/resend-verification", { email }, { skipAuthRefresh: true });
+}
