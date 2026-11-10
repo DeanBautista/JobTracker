@@ -12,8 +12,105 @@
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
       rel="stylesheet"
     />
+
+    <!-- Splash: skip it if it already played in this tab/session. -->
+    <script>
+      try {
+        if (sessionStorage.getItem("splash-seen")) {
+          document.documentElement.classList.add("no-splash");
+        }
+      } catch (e) {}
+    </script>
+
+    <!-- Splash styles live here (not in index.css) so they apply before React and Tailwind load. -->
+    <style>
+      #boot-splash {
+        --bs-bg: #f5f2ea;
+        --bs-ink: #1d1c1a;
+        --bs-muted: #625e56;
+        --bs-rule: #d9d3c5;
+        --bs-accent: #1f5a46;
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bs-bg);
+        color: var(--bs-ink);
+        transition: opacity 0.45s ease, visibility 0.45s;
+      }
+      @media (prefers-color-scheme: dark) {
+        #boot-splash {
+          --bs-bg: #151513;
+          --bs-ink: #ece8dd;
+          --bs-muted: #a29d90;
+          --bs-rule: #35342f;
+          --bs-accent: #7cc7a6;
+        }
+      }
+      /* Matches the page background so there is no white flash before the splash paints. */
+      html { background: #f5f2ea; }
+      @media (prefers-color-scheme: dark) { html { background: #151513; } }
+
+      #boot-splash.is-leaving { opacity: 0; visibility: hidden; }
+      .no-splash #boot-splash { display: none; }
+
+      #boot-splash .bs-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        animation: bs-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      #boot-splash .bs-logo { width: 56px; height: 56px; object-fit: contain; }
+      #boot-splash .bs-name {
+        font-family: "Newsreader", Georgia, "Times New Roman", serif;
+        font-weight: 500;
+        font-size: 26px;
+        line-height: 1;
+        letter-spacing: -0.01em;
+      }
+      #boot-splash .bs-bar {
+        width: 120px;
+        height: 2px;
+        background: var(--bs-rule);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      #boot-splash .bs-bar i {
+        display: block;
+        height: 100%;
+        width: 100%;
+        background: var(--bs-accent);
+        transform-origin: left;
+        animation: bs-fill 5s cubic-bezier(0.25, 1, 0.5, 1) both;
+      }
+      @keyframes bs-rise {
+        from { opacity: 0; transform: translateY(8px) scale(0.98); }
+        to { opacity: 1; transform: none; }
+      }
+      @keyframes bs-fill {
+        from { transform: scaleX(0); }
+        to { transform: scaleX(0.92); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot-splash .bs-inner,
+        #boot-splash .bs-bar i { animation: none; }
+        #boot-splash .bs-bar i { transform: scaleX(0.92); }
+        #boot-splash { transition-duration: 0.01s; }
+      }
+    </style>
   </head>
   <body>
+    <div id="boot-splash" role="status" aria-label="Loading Job Tracker">
+      <div class="bs-inner">
+        <img class="bs-logo" src="/src/assets/logo.png" alt="" />
+        <span class="bs-name">Job Tracker</span>
+        <span class="bs-bar" aria-hidden="true"><i></i></span>
+      </div>
+    </div>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
