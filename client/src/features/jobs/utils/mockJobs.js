@@ -1,0 +1,13 @@
+// Placeholder data. Replace with the API response (same shape).
+export const MOCK_JOBS = [
+  { id: 109, title: "Node.js Developer", company: "Ashgrove", stage: "applied", priority: "low", mode: "onsite", source: "Referral", appliedAt: "2026-10-11", deadline: null, daysInStage: 3, reminder: null },
+  { id: 101, title: "Frontend Developer", company: "Northwind", stage: "applied", priority: "high", mode: "remote", source: "LinkedIn", appliedAt: "2026-10-10", deadline: null, daysInStage: 4, reminder: { label: "Follow-up overdue", late: true } },
+  { id: 103, title: "Junior Full Stack", company: "Kestrel Pay", stage: "applied", priority: "high", mode: "remote", source: "LinkedIn", appliedAt: "2026-10-08", deadline: "2026-10-16", daysInStage: 5, reminder: { label: "Deadline in 2 days", late: true } },
+  { id: 105, title: "React Developer", company: "Fieldnote", stage: "screening", priority: "medium", mode: "hybrid", source: "Company site", appliedAt: "2026-10-05", deadline: null, daysInStage: 6, reminder: { label: "Phone screen Fri 09:30", late: false } },
+  { id: 102, title: "Software Engineer", company: "Orchard Labs", stage: "interview", priority: "high", mode: "remote", source: "Referral", appliedAt: "2026-10-02", deadline: null, daysInStage: 3, reminder: { label: "Interview today 14:00", late: false } },
+  { id: 104, title: "Software Engineer", company: "Linden Health", stage: "applied", priority: "medium", mode: "remote", source: "LinkedIn", appliedAt: "2026-09-29", deadline: null, daysInStage: 14, reminder: { label: "Stale, 14 days", late: true } },
+  { id: 106, title: "Web Developer", company: "Marlow Studio", stage: "offer", priority: "high", mode: "remote", source: "Referral", appliedAt: "2026-09-20", deadline: null, daysInStage: 2, reminder: { label: "Reply in 3 days", late: false } },
+  { id: 107, title: "Product Engineer", company: "Harbor & Pine", stage: "wishlist", priority: "medium", mode: "hybrid", source: "Company site", appliedAt: null, deadline: null, daysInStage: 2, reminder: null },
+  { id: 108, title: "Data Analyst", company: "Birchwood", stage: "wishlist", priority: "low", mode: "onsite", source: "LinkedIn", appliedAt: null, deadline: null, daysInStage: 5, reminder: null },
+  { id: 110, title: "Junior Backend Developer", company: "Tidewater", stage: "wishlist", priority: "high", mode: "hybrid", source: "Company site", appliedAt: null, deadline: "2026-10-15", daysInStage: 3, reminder: { label: "Deadline in 1 day", late: true } },
+];

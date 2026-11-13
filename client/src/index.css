@@ -28,6 +28,13 @@
   /* ---------- Spacing ---------- */
   --spacing-gutter: clamp(24px, 5vw, 64px); /* side padding of the form panel */
   --spacing-story-gutter: clamp(28px, 4vw, 56px); /* side padding of the dark panel */
+
+  /* ---------- Shell ---------- */
+  --spacing-sidebar: 248px;
+  --container-content: 1240px; /* max-w-content */
+  --shadow-float: 0 8px 24px rgb(0 0 0 / 0.12);
+  --breakpoint-shell: 54rem; /* sidebar becomes a drawer below this */
+  --breakpoint-tbl: 44rem; /* table becomes stacked cards below this */
 }
 
 /* Dark mode: same names, new values. Every utility updates automatically. */
@@ -51,6 +58,10 @@
     --color-info: #9db4d6;
     --color-info-soft: #222b38;
   }
+
+  select.field {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a29d90' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  }
 }
 
 @layer base {
@@ -66,5 +77,43 @@
   :focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .label {
+    @apply font-mono text-[11.5px] leading-[1.2] font-medium tracking-[0.07em] text-muted uppercase;
+  }
+
+  .btn {
+    @apply inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-ink bg-transparent px-4 text-sm leading-none font-medium whitespace-nowrap text-ink no-underline transition-colors hover:bg-tint disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45;
+  }
+  .btn-primary {
+    @apply bg-ink text-on-ink hover:border-accent hover:bg-accent;
+  }
+  .btn-sm {
+    @apply min-h-[34px] border-muted px-3 text-[13px];
+  }
+  .btn-danger {
+    @apply border-danger text-danger hover:bg-danger-soft;
+  }
+
+  .field {
+    @apply min-h-10 rounded-md border border-rule bg-surface px-3 text-sm leading-none text-ink hover:border-muted aria-invalid:border-danger aria-invalid:shadow-[inset_3px_0_0_var(--color-danger)] aria-invalid:hover:border-danger;
+  }
+  select.field {
+    @apply appearance-none bg-no-repeat pr-[30px];
+    background-position: right 12px center;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23625e56' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  }
+
+  .link {
+    @apply underline decoration-1 underline-offset-3 hover:decoration-2;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  select.field {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a29d90' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
   }
 }
