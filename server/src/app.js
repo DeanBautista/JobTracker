@@ -5,6 +5,7 @@ const usersRouter = require('./routes/users');
 const cookieParser = require('cookie-parser');
 const authRouter = require('./routes/auth');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
+const jobsRouter = require('./routes/jobs');
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.get('/health', async (req, res) => {
 
 app.use('/users', usersRouter);
 app.use('/auth', authRouter);
+app.use('/jobs', jobsRouter);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -61,12 +61,19 @@ jest.mock('./utils/mailer', () => ({
   sendPasswordResetEmail: jest.fn(),
 }));
 
+jest.mock('./models/jobModel', () => ({
+  create: jest.fn(),
+  findDuplicate: jest.fn(),
+  findById: jest.fn(),
+}));
+
 const knex = require('./db/knex');
 const userModel = require('./models/userModel');
 const sessionModel = require('./models/sessionModel');
 const AppError = require('./utils/AppError');
 const { signAccessToken } = require('./utils/tokens');
 const userTokenModel = require('./models/userTokenModel');
+const jobModel = require('./models/jobModel');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('./utils/mailer');
 const app = require('./app');
 
@@ -769,6 +776,165 @@ describe('POST /auth/reset-password', () => {
     expect(userTokenModel.resetPassword).toHaveBeenCalledWith('good-token', 'new-hash');
     expect(res.headers['set-cookie'][0]).toContain('refresh_token=;');
     expect(sessionModel.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /jobs', () => {
+  const auth = () => ({ Authorization: `Bearer ${signAccessToken(147)}` });
+  const validBody = { title: 'Frontend Developer', company: 'Northwind' };
+  const created = { id: 1, title: 'Frontend Developer', company: 'Northwind', stage: 'wishlist' };
+
+  test('returns 401 without a token', async () => {
+    const res = await request(app).post('/jobs').send(validBody);
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body.code).toBe('unauthorized');
+    expect(jobModel.create).not.toHaveBeenCalled();
+  });
+
+  test('returns 422 with field errors when title and company are missing', async () => {
+    const res = await request(app).post('/jobs').set(auth()).send({});
+
+    expect(res.statusCode).toBe(422);
+    expect(Object.keys(res.body.errors)).toEqual(
+      expect.arrayContaining(['title', 'company'])
+    );
+    expect(jobModel.create).not.toHaveBeenCalled();
+  });
+
+  test('returns 422 for a value that is not a database enum', async () => {
+    const res = await request(app)
+      .post('/jobs')
+      .set(auth())
+      .send({ ...validBody, employmentType: 'fulltime' });
+
+    expect(res.statusCode).toBe(422);
+    expect(res.body.errors.employmentType).toBeDefined();
+    expect(jobModel.create).not.toHaveBeenCalled();
+  });
+
+  test('returns 422 for an invalid link', async () => {
+    const res = await request(app)
+      .post('/jobs')
+      .set(auth())
+      .send({ ...validBody, link: 'not-a-url' });
+
+    expect(res.statusCode).toBe(422);
+    expect(res.body.errors.link).toBeDefined();
+  });
+
+  test('returns 422 when max salary is below min salary', async () => {
+    const res = await request(app)
+      .post('/jobs')
+      .set(auth())
+      .send({ ...validBody, salaryMin: '50000', salaryMax: '40000' });
+
+    expect(res.statusCode).toBe(422);
+    expect(res.body.errors.salaryMax).toBeDefined();
+  });
+
+  test('creates the job and returns 201', async () => {
+    jobModel.create.mockResolvedValue(created);
+
+    const res = await request(app).post('/jobs').set(auth()).send(validBody);
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body).toEqual(created);
+    expect(jobModel.findDuplicate).not.toHaveBeenCalled(); // no link, nothing to check
+  });
+
+  test('uses the user id from the token, never from the body', async () => {
+    jobModel.create.mockResolvedValue(created);
+
+    await request(app)
+      .post('/jobs')
+      .set(auth())
+      .send({ ...validBody, user_id: 999, userId: 999 });
+
+    expect(jobModel.create).toHaveBeenCalledWith(147, expect.any(Object));
+  });
+
+  test('cleans a realistic form payload: blanks become null, values are mapped', async () => {
+    jobModel.create.mockResolvedValue(created);
+
+    await request(app)
+      .post('/jobs')
+      .set(auth())
+      .send({
+        title: '  Frontend Developer  ',
+        company: ' Northwind ',
+        stage: 'applied',
+        link: '',
+        source: '',
+        workMode: '',
+        employmentType: 'full_time',
+        salaryMin: '50000',
+        salaryMax: '',
+        currency: 'php',
+        priority: 'high',
+        dateApplied: '2026-11-14',
+        description: '',
+      });
+
+    expect(jobModel.create).toHaveBeenCalledWith(
+      147,
+      expect.objectContaining({
+        title: 'Frontend Developer',
+        company: 'Northwind',
+        status: 'applied',
+        link: null,
+        source: null,
+        workMode: null,
+        employmentType: 'full_time',
+        salaryMin: 50000,
+        salaryMax: null,
+        currency: 'PHP',
+        priority: 'high',
+        dateApplied: '2026-11-14',
+        description: null,
+      })
+    );
+  });
+
+  test('returns 409 with the existing job when the link was already added', async () => {
+    const duplicate = { id: 5, title: 'Frontend Developer', company: 'Northwind' };
+    jobModel.findDuplicate.mockResolvedValue(duplicate);
+
+    const res = await request(app)
+      .post('/jobs')
+      .set(auth())
+      .send({ ...validBody, link: 'https://northwind.com/jobs/1' });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toEqual({ duplicate });
+    expect(jobModel.findDuplicate).toHaveBeenCalledWith(147, 'https://northwind.com/jobs/1');
+    expect(jobModel.create).not.toHaveBeenCalled();
+  });
+
+  test('skips the duplicate check when confirmDuplicate is true', async () => {
+    jobModel.create.mockResolvedValue(created);
+
+    const res = await request(app)
+      .post('/jobs')
+      .set(auth())
+      .send({ ...validBody, link: 'https://northwind.com/jobs/1', confirmDuplicate: true });
+
+    expect(res.statusCode).toBe(201);
+    expect(jobModel.findDuplicate).not.toHaveBeenCalled();
+    expect(jobModel.create).toHaveBeenCalledTimes(1);
+  });
+
+  test('creates the job when the link is new', async () => {
+    jobModel.findDuplicate.mockResolvedValue(undefined);
+    jobModel.create.mockResolvedValue(created);
+
+    const res = await request(app)
+      .post('/jobs')
+      .set(auth())
+      .send({ ...validBody, link: 'https://northwind.com/jobs/2' });
+
+    expect(res.statusCode).toBe(201);
+    expect(jobModel.create).toHaveBeenCalledTimes(1);
   });
 });
 

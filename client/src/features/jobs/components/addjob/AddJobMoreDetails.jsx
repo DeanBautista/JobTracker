@@ -53,7 +53,7 @@ export default function AddJobMoreDetails({ errors }) {
             <legend className="mb-1.5 text-sm font-medium">Salary</legend>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1fr_1fr_96px_1fr]">
               <JobField label="Min" compact>
-                {(p) => <input {...p} name="salaryMin " type="number" min="0" step="any" inputMode="decimal" className={FIELD_CLASS} />}
+                {(p) => <input {...p} name="salaryMin" type="number" min="0" step="any" inputMode="decimal" className={FIELD_CLASS} />}
               </JobField>
               <JobField label="Max" compact error={errors.salaryMax}>
                 {(p) => <input {...p} name="salaryMax" type="number" min="0" step="any" inputMode="decimal" className={FIELD_CLASS} />}

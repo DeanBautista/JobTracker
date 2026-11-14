@@ -1,10 +1,15 @@
-// TODO: replace with POST /jobs through lib/api.js.
-// Expected responses:
-//   201 -> { job }
-//   409 -> { duplicate: { id, title, company } }   (skipped when confirmDuplicate is true)
-//   422 -> { errors: { field_name: "message" } }
+import { api } from "@/lib/api";
+
 export default async function createJob(values, { confirmDuplicate = false } = {}) {
-  await new Promise((resolve) => setTimeout(resolve, 600));
-  console.info("create job", values, { confirmDuplicate });
-  return { job: { id: crypto.randomUUID(), ...values } };
+  try {
+    const { data } = await api.post("/jobs", { ...values, confirmDuplicate });
+    return { job: data };
+  } catch (error) {
+    const { status, data } = error.response ?? {};
+    if (status === 422) return { errors: data.errors };
+    if (status === 409) return { duplicate: data.duplicate };
+    throw new Error(data?.message || "Could not save the job. Try again.", {
+      cause: error,
+    });
+  }
 }
