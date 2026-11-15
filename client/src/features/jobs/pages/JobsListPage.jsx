@@ -26,7 +26,7 @@ export default function JobsListPage() {
     applyFilters, removeFilter, clearFilters, toggleSort, setPage, setSize,
   } = useJobFilters();
 
-  const { status, jobs, total } = useJobs({ filters, sort, dir, page, size });
+  const { status, jobs, total, retry } = useJobs({ filters, sort, dir, page, size });
   const selection = useJobSelection(jobs);
   const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS);
 
@@ -54,7 +54,7 @@ export default function JobsListPage() {
       )}
 
       {status === "loading" && <JobsSkeleton />}
-      {status === "error" && <ListState variant="error" />}
+      {status === "error" && <ListState variant="error" onRetry={retry} />}
       {status === "success" && total === 0 && (
         <ListState variant={hasFilters ? "none" : "empty"} />
       )}
