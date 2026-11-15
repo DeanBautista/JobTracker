@@ -4,7 +4,6 @@ const EMPLOYMENT_TYPES = ['full_time', 'part_time', 'contract', 'internship'];
 const PERIODS = ['hour', 'month', 'year'];
 const PRIORITIES = ['low', 'medium', 'high'];
 
-const CLOSED_STATUSES = ['accepted', 'rejected', 'withdrawn', 'ghosted'];
 const SORT_KEYS = ['title', 'company', 'stage', 'priority', 'applied', 'days'];
 const PAGE_SIZES = [10, 25, 50];
 const DATE_RANGES = [30, 90];
