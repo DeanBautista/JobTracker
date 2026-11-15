@@ -38,7 +38,6 @@ export const PAY_PERIODS = [
   { value: "month", label: "Per month" },
   { value: "year", label: "Per year" },
   { value: "hour", label: "Per hour" },
-  { value: "one-time", label: "One-time" },
 ];
 
 export const CURRENCIES = ["PHP", "USD", "SGD", "EUR", "GBP"];

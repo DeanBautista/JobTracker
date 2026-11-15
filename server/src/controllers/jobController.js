@@ -1,5 +1,11 @@
 const jobModel = require('../models/jobModel');
-const { validateCreateJob } = require('../validators/jobValidator');
+const { validateCreateJob, parseListQuery } = require('../validators/jobValidator');
+
+// GET /jobs
+const listJobs = async (req, res) => {
+  const result = await jobModel.list(req.userId, parseListQuery(req.query));
+  res.json(result); // { jobs, total }
+};
 
 // POST /jobs
 const createJob = async (req, res) => {
@@ -15,4 +21,4 @@ const createJob = async (req, res) => {
   res.status(201).json(job);
 };
 
-module.exports = { createJob };
+module.exports = { createJob, listJobs };

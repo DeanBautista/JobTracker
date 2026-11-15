@@ -31,6 +31,7 @@ export default function JobsListPage() {
   const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS);
 
   const hasFilters = activeFilters.length > 0;
+  const showFilters = status === "success" && (total > 0 || hasFilters);
   const showList = status === "success" && total > 0;
 
   const toggleColumn = (key) => setVisibleColumns((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -39,13 +40,7 @@ export default function JobsListPage() {
     <>
       <JobsHeader total={total} hasFilters={hasFilters} sort={sort} dir={dir} />
 
-      {status === "loading" && <JobsSkeleton />}
-      {status === "error" && <ListState variant="error" />}
-      {status === "success" && total === 0 && (
-        <ListState variant={hasFilters ? "none" : "empty"} />
-      )}
-
-      {showList && (
+      {showFilters && (
         <>
           <JobFilters filters={filters} onApply={applyFilters} />
           <ActiveFilters
@@ -55,7 +50,17 @@ export default function JobsListPage() {
             visibleColumns={visibleColumns}
             onToggleColumn={toggleColumn}
           />
+        </>
+      )}
 
+      {status === "loading" && <JobsSkeleton />}
+      {status === "error" && <ListState variant="error" />}
+      {status === "success" && total === 0 && (
+        <ListState variant={hasFilters ? "none" : "empty"} />
+      )}
+
+      {showList && (
+        <>
           <JobsTable
             jobs={jobs}
             visible={visibleColumns}

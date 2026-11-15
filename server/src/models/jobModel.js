@@ -1,24 +1,107 @@
 const knex = require('../db/knex');
 const { hashUrl } = require('../utils/urlHash');
 
-const baseQuery = () =>
-  knex('applications as a')
+const CLOSED_STATUSES = ['accepted', 'rejected', 'withdrawn', 'ghosted'];
+
+// One shape for the list and for a newly created job. Dates are formatted in SQL so
+// the driver never turns them into JS Dates (which shift with the timezone).
+const JOB_COLUMNS = [
+  'a.id',
+  'a.title',
+  'c.name as company',
+  'a.status as stage',
+  'a.priority',
+  'a.work_mode as mode',
+  'a.source',
+  knex.raw("DATE_FORMAT(a.date_applied, '%Y-%m-%d') AS appliedAt"),
+  knex.raw("DATE_FORMAT(a.deadline, '%Y-%m-%d') AS deadline"),
+  knex.raw('TIMESTAMPDIFF(DAY, a.stage_changed_at, NOW()) AS daysInStage'),
+];
+
+// ENUM columns sort by their declared order, which already matches the UI:
+// stage: wishlist -> ghosted, priority: low < medium < high.
+const SORT_COLUMNS = {
+  title: 'a.title',
+  company: 'c.name',
+  stage: 'a.status',
+  priority: 'a.priority',
+  applied: 'a.date_applied',
+  days: 'a.stage_changed_at',
+};
+
+function filtered(userId, f) {
+  const query = knex('applications as a')
     .join('companies as c', 'c.id', 'a.company_id')
-    .select(
-      'a.id',
-      'a.title',
-      'c.name as company',
-      'a.job_url as link',
-      'a.status as stage',
-      'a.priority',
-      'a.location',
-      'a.work_mode as workMode',
-      'a.date_applied as dateApplied',
-      'a.created_at as createdAt'
-    );
+    .where('a.user_id', userId)
+    .whereNull('a.deleted_at');
+
+  if (!f.archived) query.whereNull('a.archived_at');
+
+  if (f.q) {
+    const like = `%${f.q.replace(/[\\%_]/g, '\\$&')}%`; // escape LIKE wildcards
+    query.where((qb) => qb.where('a.title', 'like', like).orWhere('c.name', 'like', like));
+  }
+  if (f.stage === 'closed') query.whereIn('a.status', CLOSED_STATUSES);
+  else if (f.stage) query.where('a.status', f.stage);
+  if (f.mode) query.where('a.work_mode', f.mode);
+  if (f.priority) query.where('a.priority', f.priority);
+  if (f.source) query.where('a.source', f.source);
+  if (f.date) query.whereRaw('a.date_applied >= DATE_SUB(CURDATE(), INTERVAL ? DAY)', [f.date]);
+
+  return query;
+}
+
+// Adds daysInStage as a number and the next pending reminder to each row.
+async function withReminders(userId, rows) {
+  if (rows.length === 0) return [];
+
+  const reminders = await knex('reminders')
+    .select('application_id', 'title', knex.raw('due_at <= NOW() AS late'))
+    .where({ user_id: userId, status: 'pending' })
+    .whereIn('application_id', rows.map((r) => r.id))
+    .orderBy('due_at', 'asc');
+
+  const next = new Map(); // earliest first, so keep the first per job
+  for (const r of reminders) if (!next.has(r.application_id)) next.set(r.application_id, r);
+
+  return rows.map((row) => {
+    const r = next.get(row.id);
+    return {
+      ...row,
+      daysInStage: Number(row.daysInStage),
+      reminder: r ? { label: r.title, late: Boolean(r.late) } : null,
+    };
+  });
+}
+
+async function list(userId, f) {
+  const base = filtered(userId, f);
+
+  // "Days in stage" ascending means the most recent stage change first.
+  const flip = f.sort === 'days';
+  const direction = flip ? (f.dir === 'asc' ? 'desc' : 'asc') : f.dir;
+
+  const [{ total }, rows] = await Promise.all([
+    base.clone().count({ total: 'a.id' }).first(),
+    base
+      .clone()
+      .select(JOB_COLUMNS)
+      .orderBy(SORT_COLUMNS[f.sort], direction)
+      .orderBy('a.id', 'desc') // stable paging when values tie
+      .limit(f.size)
+      .offset((f.page - 1) * f.size),
+  ]);
+
+  return { jobs: await withReminders(userId, rows), total: Number(total) };
+}
 
 async function findById(userId, id) {
-  return baseQuery().where({ 'a.id': id, 'a.user_id': userId }).first();
+  const rows = await knex('applications as a')
+    .join('companies as c', 'c.id', 'a.company_id')
+    .select(JOB_COLUMNS)
+    .where({ 'a.id': id, 'a.user_id': userId })
+    .limit(1);
+  return (await withReminders(userId, rows))[0];
 }
 
 // Same link, not in Trash.
@@ -34,12 +117,9 @@ async function findDuplicate(userId, link) {
 // Expects validated values. Returns the created job.
 async function create(userId, v) {
   const id = await knex.transaction(async (trx) => {
-    // Company: reuse by (user_id, name), create if missing.
-    // The unique key is case-insensitive, so "northwind" matches "Northwind".
     await trx('companies').insert({ user_id: userId, name: v.company }).onConflict().ignore();
     const company = await trx('companies').where({ user_id: userId, name: v.company }).first('id');
 
-    // New card goes to the bottom of its column.
     const { maxPos } = await trx('applications')
       .where({ user_id: userId, status: v.status })
       .max({ maxPos: 'board_position' })
@@ -81,4 +161,4 @@ async function create(userId, v) {
   return findById(userId, id);
 }
 
-module.exports = { findById, findDuplicate, create };
+module.exports = { list, findById, findDuplicate, create };

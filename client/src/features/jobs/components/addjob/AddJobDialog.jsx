@@ -5,9 +5,10 @@ import { FIELD_CLASS, STAGE_OPTIONS } from "../../utils/jobFormOptions";
 import AddJobMoreDetails from "./AddJobMoreDetails";
 import JobField from "../shared/JobField";
 
-export default function AddJobDialog({ onClose }) {
+export default function AddJobDialog({ onClose, onCreated }) {
   const { errors, formError, duplicate, saving, submit, clearDuplicate } = useAddJobForm({
     onDone: onClose,
+    onCreated,
   });
   const hasErrors = Object.keys(errors).length > 0;
 
