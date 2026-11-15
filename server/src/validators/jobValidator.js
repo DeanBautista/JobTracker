@@ -4,8 +4,14 @@ const EMPLOYMENT_TYPES = ['full_time', 'part_time', 'contract', 'internship'];
 const PERIODS = ['hour', 'month', 'year'];
 const PRIORITIES = ['low', 'medium', 'high'];
 
+const CLOSED_STATUSES = ['accepted', 'rejected', 'withdrawn', 'ghosted'];
+const SORT_KEYS = ['title', 'company', 'stage', 'priority', 'applied', 'days'];
+const PAGE_SIZES = [10, 25, 50];
+const DATE_RANGES = [30, 90];
+
 const text = (v) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null);
 const isBlank = (v) => v === undefined || v === null || v === '';
+const str = (v) => (typeof v === 'string' ? v.trim() : '');
 
 const isHttpUrl = (value) => {
   try {
@@ -119,4 +125,29 @@ function validateCreateJob(body) {
   return { errors, values };
 }
 
-module.exports = { validateCreateJob };
+// Never throws: an unknown value falls back to its default, so a stale URL still loads.
+function parseListQuery(query) {
+  const stage = str(query.stage);
+  const mode = str(query.mode);
+  const priority = str(query.priority);
+  const sort = str(query.sort);
+  const page = parseInt(query.page, 10);
+  const size = parseInt(query.size, 10);
+  const date = parseInt(query.date, 10);
+
+  return {
+    q: str(query.q).slice(0, 100),
+    stage: stage === 'closed' || STATUSES.includes(stage) ? stage : '',
+    mode: WORK_MODES.includes(mode) ? mode : '',
+    priority: PRIORITIES.includes(priority) ? priority : '',
+    source: str(query.source).slice(0, 80),
+    date: DATE_RANGES.includes(date) ? date : 0,
+    archived: str(query.archived) === '1',
+    sort: SORT_KEYS.includes(sort) ? sort : 'applied',
+    dir: str(query.dir) === 'asc' ? 'asc' : 'desc',
+    page: page > 0 ? Math.min(page, 100000) : 1,
+    size: PAGE_SIZES.includes(size) ? size : 10,
+  };
+}
+
+module.exports = { validateCreateJob, parseListQuery };

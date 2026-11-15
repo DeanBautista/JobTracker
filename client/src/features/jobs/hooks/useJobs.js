@@ -1,42 +1,27 @@
-import { CLOSED_STAGES, OPEN_STAGES } from "../utils/jobOptions";
-import { MOCK_JOBS } from "../utils/mockJobs";
+import { useContext, useEffect, useState } from "react";
+import fetchJobs from "../api/fetchJobs";
+import AddJobContext from "../context/AddJobContext";
 
-const CLOSED_VALUES = CLOSED_STAGES.map((s) => s.value);
-const STAGE_ORDER = [...OPEN_STAGES, ...CLOSED_STAGES].map((s) => s.value);
-const PRIORITY_RANK = { high: 3, medium: 2, low: 1 };
-
-const SORTERS = {
-  title: (a, b) => a.title.localeCompare(b.title),
-  company: (a, b) => a.company.localeCompare(b.company),
-  stage: (a, b) => STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage),
-  priority: (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority],
-  applied: (a, b) => (a.appliedAt ?? "").localeCompare(b.appliedAt ?? ""),
-  days: (a, b) => a.daysInStage - b.daysInStage,
-};
-
-// Placeholder: filters/sorts/pages the mock data on the client.
-// Replace the body with an API call using the same params; keep the return shape.
 export default function useJobs({ filters, sort, dir, page, size }) {
-  const q = filters.q.toLowerCase();
+  // Bumps every time a job is added, which reloads the list.
+  const jobsVersion = useContext(AddJobContext)?.jobsVersion ?? 0;
+  const [state, setState] = useState({ status: "loading", jobs: [], total: 0 });
 
-  const matched = MOCK_JOBS.filter(
-    (job) =>
-      (!q || `${job.title} ${job.company}`.toLowerCase().includes(q)) &&
-      (!filters.stage ||
-        (filters.stage === "closed" ? CLOSED_VALUES.includes(job.stage) : job.stage === filters.stage)) &&
-      (!filters.mode || job.mode === filters.mode) &&
-      (!filters.priority || job.priority === filters.priority) &&
-      (!filters.source || job.source === filters.source),
-  );
+  // A string key, so the effect reruns only when the query really changes.
+  const key = JSON.stringify({ ...filters, sort, dir, page, size });
 
-  const sorted = [...matched].sort(SORTERS[sort] ?? SORTERS.applied);
-  if (dir === "desc") sorted.reverse();
+  useEffect(() => {
+    const controller = new AbortController();
 
-  const start = (page - 1) * size;
+    fetchJobs(JSON.parse(key), { signal: controller.signal })
+      .then(({ jobs, total }) => setState({ status: "success", jobs, total }))
+      .catch((error) => {
+        if (error.code === "ERR_CANCELED") return; // a newer request replaced this one
+        setState((prev) => ({ ...prev, status: "error" }));
+      });
 
-  return {
-    status: "success", // "loading" | "error" | "success"
-    jobs: sorted.slice(start, start + size),
-    total: matched.length,
-  };
+    return () => controller.abort();
+  }, [key, jobsVersion]);
+
+  return state; // { status, jobs, total }
 }

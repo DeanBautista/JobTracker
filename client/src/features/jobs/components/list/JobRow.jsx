@@ -19,9 +19,9 @@ function Cell({ className = "", wideOnly = false, children }) {
 const Dash = () => <span className="text-muted">–</span>;
 
 function buildMeta(job) {
-  const parts = [job.company, optionLabel(job.mode).toLowerCase(), job.source];
+  const parts = [job.company, job.mode && optionLabel(job.mode).toLowerCase(), job.source];
   if (job.appliedAt) parts.push(`applied ${formatShortDate(job.appliedAt)}`);
-  return parts.join(" · ");
+  return parts.filter(Boolean).join(" · ");
 }
 
 export default function JobRow({ job, visible, selected, onToggle, menuOpensUp, actions }) {

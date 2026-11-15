@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import createJob from "../api/createJob";
 import validateJob from "../utils/validateJob";
 
-export default function useAddJobForm({ onDone }) {
+export default function useAddJobForm({ onDone, onCreated }) {
   const anotherRef = useRef(false);
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
@@ -48,6 +48,8 @@ export default function useAddJobForm({ onDone }) {
         setDuplicate(result.duplicate);
         return;
       }
+
+      onCreated?.(result.job);
 
       if (anotherRef.current) {
         form.reset();

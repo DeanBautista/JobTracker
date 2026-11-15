@@ -65,6 +65,7 @@ jest.mock('./models/jobModel', () => ({
   create: jest.fn(),
   findDuplicate: jest.fn(),
   findById: jest.fn(),
+  list: jest.fn(),
 }));
 
 const knex = require('./db/knex');
@@ -935,6 +936,60 @@ describe('POST /jobs', () => {
 
     expect(res.statusCode).toBe(201);
     expect(jobModel.create).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('GET /jobs', () => {
+  const auth = () => ({ Authorization: `Bearer ${signAccessToken(147)}` });
+
+  test('returns 401 without a token', async () => {
+    const res = await request(app).get('/jobs');
+
+    expect(res.statusCode).toBe(401);
+    expect(jobModel.list).not.toHaveBeenCalled();
+  });
+
+  test('returns the jobs and total for the signed-in user, with default paging', async () => {
+    const result = { jobs: [{ id: 1, title: 'Dev' }], total: 1 };
+    jobModel.list.mockResolvedValue(result);
+
+    const res = await request(app).get('/jobs').set(auth());
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual(result);
+    expect(jobModel.list).toHaveBeenCalledWith(
+      147,
+      expect.objectContaining({ sort: 'applied', dir: 'desc', page: 1, size: 10, archived: false })
+    );
+  });
+
+  test('passes parsed filters, sort and paging to the model', async () => {
+    jobModel.list.mockResolvedValue({ jobs: [], total: 0 });
+
+    await request(app)
+      .get('/jobs?q=react&stage=closed&mode=remote&priority=high&date=30&archived=1&sort=days&dir=asc&page=2&size=25')
+      .set(auth());
+
+    expect(jobModel.list).toHaveBeenCalledWith(
+      147,
+      expect.objectContaining({
+        q: 'react', stage: 'closed', mode: 'remote', priority: 'high',
+        date: 30, archived: true, sort: 'days', dir: 'asc', page: 2, size: 25,
+      })
+    );
+  });
+
+  test('falls back to defaults for invalid values', async () => {
+    jobModel.list.mockResolvedValue({ jobs: [], total: 0 });
+
+    await request(app)
+      .get('/jobs?stage=bogus&sort=hack&dir=sideways&size=999&page=-3&date=7')
+      .set(auth());
+
+    expect(jobModel.list).toHaveBeenCalledWith(
+      147,
+      expect.objectContaining({ stage: '', sort: 'applied', dir: 'desc', size: 10, page: 1, date: 0 })
+    );
   });
 });
 
