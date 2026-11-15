@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import fetchJobs from "../api/fetchJobs";
 import AddJobContext from "../context/AddJobContext";
 
@@ -6,6 +6,12 @@ export default function useJobs({ filters, sort, dir, page, size }) {
   // Bumps every time a job is added, which reloads the list.
   const jobsVersion = useContext(AddJobContext)?.jobsVersion ?? 0;
   const [state, setState] = useState({ status: "loading", jobs: [], total: 0 });
+  const [attempt, setAttempt] = useState(0);
+
+  const retry = useCallback(() => {
+    setState((prev) => ({ ...prev, status: "loading" }));
+    setAttempt((n) => n + 1);
+  }, []);
 
   // A string key, so the effect reruns only when the query really changes.
   const key = JSON.stringify({ ...filters, sort, dir, page, size });
@@ -21,7 +27,7 @@ export default function useJobs({ filters, sort, dir, page, size }) {
       });
 
     return () => controller.abort();
-  }, [key, jobsVersion]);
+  }, [key, jobsVersion, attempt]);
 
-  return state; // { status, jobs, total }
+  return { ...state, retry }; // { status, jobs, total, retry }
 }

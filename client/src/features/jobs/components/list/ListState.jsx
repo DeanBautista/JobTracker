@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import useAddJob from "../../hooks/useAddJob";
 
 const STATES = {
   none: {
@@ -12,20 +13,22 @@ const STATES = {
     title: "No jobs yet",
     text: "Add your first job and it will appear here and on the board.",
     label: "Add your first job",
-    to: "/jobs/new",
+    action: "add",
     primary: true,
   },
   error: {
     title: "Could not load your jobs",
     text: "Check your connection and try again. Your jobs are safe.",
     label: "Try again",
-    to: "/jobs",
+    action: "retry",
     primary: true,
   },
 };
 
-export default function ListState({ variant }) {
-  const { title, text, label, to, primary } = STATES[variant];
+export default function ListState({ variant, onRetry }) {
+  const { openAddJob } = useAddJob();
+  const { title, text, label, to, action, primary } = STATES[variant];
+  const className = `btn ${primary ? "btn-primary" : ""}`;
 
   return (
     <section
@@ -37,7 +40,14 @@ export default function ListState({ variant }) {
         {title}
       </h2>
       <p className="mx-auto mt-3 mb-6 max-w-[46ch] text-muted">{text}</p>
-      <Link to={to} className={`btn ${primary ? "btn-primary" : ""}`}>{label}</Link>
+
+      {to && <Link to={to} className={className}>{label}</Link>}
+      {action === "add" && (
+        <button type="button" onClick={openAddJob} className={className}>{label}</button>
+      )}
+      {action === "retry" && (
+        <button type="button" onClick={onRetry} className={className}>{label}</button>
+      )}
     </section>
   );
 }
