@@ -1,14 +1,15 @@
 import Button from "@/components/Button";
+const API = import.meta.env.VITE_API_URL;
 
 export default function SocialButtons() {
   return (
     <div className="grid gap-2.5">
-      <Button as="a" href="/auth/google" fullWidth>
+      <Button as="a" href={`${API}/auth/google`} fullWidth>
         <GoogleIcon />
         Continue with Google
       </Button>
 
-      <Button as="a" href="/auth/github" fullWidth>
+      <Button as="a" href={`${API}/auth/github`} fullWidth>
         <GitHubIcon />
         Continue with GitHub
       </Button>
