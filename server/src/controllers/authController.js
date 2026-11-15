@@ -193,4 +193,5 @@ const resetPassword = async (req, res) => {
 
 module.exports = {
   login, refresh, logout, me, verifyEmail, resendVerification, forgotPassword, resetPassword,
+  startSession,
 };

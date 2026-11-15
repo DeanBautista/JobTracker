@@ -1,9 +1,31 @@
 process.env.ACCESS_TOKEN_SECRET = 'test-secret-for-jest';
+process.env.CLIENT_URL = 'http://localhost:5173';
+process.env.GOOGLE_CLIENT_ID = 'test-google-id';
+process.env.GOOGLE_CLIENT_SECRET = 'test-google-secret';
+process.env.GOOGLE_REDIRECT_URI = 'http://localhost:5000/auth/google/callback';
+process.env.GITHUB_CLIENT_ID = 'test-github-id';
+process.env.GITHUB_CLIENT_SECRET = 'test-github-secret';
+process.env.GITHUB_REDIRECT_URI = 'http://localhost:5000/auth/github/callback';
 
 // Mocked for every test file: no database, no real emails.
 jest.mock('./db/knex', () => ({
   raw: jest.fn(),
 }));
+
+jest.mock('./models/oauthModel', () => ({
+  findOrCreateUser: jest.fn(),
+}));
+
+// A class (not jest.fn) so resetAllMocks can't wipe the constructor.
+jest.mock('google-auth-library', () => {
+  const verifyIdToken = jest.fn();
+  return {
+    OAuth2Client: class {
+      verifyIdToken = verifyIdToken;
+    },
+    __verifyIdToken: verifyIdToken,
+  };
+});
 
 jest.mock('./models/userModel', () => ({
   create: jest.fn(),
