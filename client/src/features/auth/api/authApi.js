@@ -38,3 +38,8 @@ export async function forgotPassword(email) {
 export async function resetPassword({ token, password }) {
   await api.post("/auth/reset-password", { token, password }, { skipAuthRefresh: true });
 }
+
+export async function completeOnboarding() {
+  const { data } = await api.post("/users/me/onboarding");
+  return data; // user
+}

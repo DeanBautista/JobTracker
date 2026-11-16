@@ -2,6 +2,7 @@ const userModel = require('../models/userModel');
 const userTokenModel = require('../models/userTokenModel');
 const { sendVerificationEmail } = require('../utils/mailer');
 const { validateCreateUser } = require('../validators/userValidator');
+const AppError = require('../utils/AppError');
 
 // POST /users
 const createUser = async (req, res) => {
@@ -21,4 +22,11 @@ const createUser = async (req, res) => {
   res.status(201).json(user);
 };
 
-module.exports = { createUser };
+// POST /users/me/onboarding (protected)
+const completeOnboarding = async (req, res) => {
+  const user = await userModel.completeOnboarding(req.userId);
+  if (!user) throw AppError.unauthorized('invalid_token');
+  res.json(user);
+};
+
+module.exports = { createUser, completeOnboarding };

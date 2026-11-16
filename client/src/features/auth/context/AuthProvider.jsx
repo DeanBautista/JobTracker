@@ -59,9 +59,15 @@ export default function AuthProvider({ children }) {
     return user;
   }, []);
 
+  const completeOnboarding = useCallback(async () => {
+  const user = await authApi.completeOnboarding();
+    setUser(user); // onboarded_at is now set, so the guards let them through
+    return user;
+  }, []);
+
   const value = useMemo(
-    () => ({ user, status, login, logout, verifyEmail }),
-    [user, status, login, logout, verifyEmail]
+    () => ({ user, status, login, logout, verifyEmail, completeOnboarding }),
+    [user, status, login, logout, verifyEmail, completeOnboarding]
   );
   
 

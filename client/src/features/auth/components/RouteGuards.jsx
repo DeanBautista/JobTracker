@@ -21,3 +21,17 @@ export function GuestRoute() {
   if (status === "authenticated") return <Navigate to="/dashboard" replace />;
   return <Outlet />;
 }
+
+// Signed in but not onboarded yet: send them to /onboarding.
+export function OnboardedRoute() {
+  const { user } = useAuth();
+  if (!user?.onboarded_at) return <Navigate to="/onboarding" replace />;
+  return <Outlet />;
+}
+
+// /onboarding is only for users who haven't finished it.
+export function OnboardingRoute() {
+  const { user } = useAuth();
+  if (user?.onboarded_at) return <Navigate to="/dashboard" replace />;
+  return <Outlet />;
+}
