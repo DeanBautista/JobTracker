@@ -8,17 +8,19 @@ const LOCK_MINUTES = 15;
 
 // Columns that are safe to send to clients. password_hash, failed_logins and
 // locked_until are intentionally left out.
+// Qualified with the table name because user_settings is joined in.
 const SAFE_COLUMNS = [
-  'id',
-  'name',
-  'email',
-  'email_verified_at',
-  'avatar_url',
-  'target_role',
-  'home_location',
-  'is_demo',
-  'created_at',
-  'updated_at',
+  'users.id',
+  'users.name',
+  'users.email',
+  'users.email_verified_at',
+  'users.avatar_url',
+  'users.target_role',
+  'users.home_location',
+  'users.is_demo',
+  'users.created_at',
+  'users.updated_at',
+  'user_settings.onboarded_at',
 ];
 
 const hashPassword = (password) => bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -26,27 +28,32 @@ const hashPassword = (password) => bcrypt.hash(password, BCRYPT_ROUNDS);
 const optionalText = (v) =>
   typeof v === 'string' && v.trim() !== '' ? v.trim() : null;
 
+// users LEFT JOIN user_settings, so a user without a settings row still loads
+// (onboarded_at comes back null).
+const usersWithSettings = () =>
+  knex('users').leftJoin('user_settings', 'user_settings.user_id', 'users.id');
+
 async function findById(id) {
-  return knex('users').select(SAFE_COLUMNS).where({ id }).first();
+  return usersWithSettings().select(SAFE_COLUMNS).where({ 'users.id': id }).first();
 }
 
 async function findByEmail(email) {
-  return knex('users')
+  return usersWithSettings()
     .select(SAFE_COLUMNS)
-    .where({ email: email.trim().toLowerCase() })
+    .where({ 'users.email': email.trim().toLowerCase() })
     .first();
 }
 
 // Login only. Includes password_hash and lock flags. Never send the result to clients.
 async function findAuthByEmail(email) {
-  return knex('users')
+  return usersWithSettings()
     .select([
       ...SAFE_COLUMNS,
-      'password_hash',
-      knex.raw('(locked_until IS NOT NULL AND locked_until > NOW()) AS is_locked'),
-      knex.raw('(locked_until IS NOT NULL AND locked_until <= NOW()) AS lock_expired'),
+      'users.password_hash',
+      knex.raw('(users.locked_until IS NOT NULL AND users.locked_until > NOW()) AS is_locked'),
+      knex.raw('(users.locked_until IS NOT NULL AND users.locked_until <= NOW()) AS lock_expired'),
     ])
-    .where({ email: email.trim().toLowerCase() })
+    .where({ 'users.email': email.trim().toLowerCase() })
     .first();
 }
 
@@ -96,6 +103,18 @@ async function create({
   return findById(id);
 }
 
+// Idempotent: calling it twice keeps the original onboarded_at.
+// The insert-ignore covers accounts that have no settings row (e.g. OAuth
+// sign-ups), which would otherwise update 0 rows and loop back to /onboarding.
+async function completeOnboarding(id) {
+  await knex('user_settings').insert({ user_id: id }).onConflict('user_id').ignore();
+  await knex('user_settings')
+    .where({ user_id: id })
+    .whereNull('onboarded_at')
+    .update({ onboarded_at: knex.fn.now() });
+  return findById(id);
+}
+
 async function recordFailedLogin(id) {
   // Key order matters: MySQL evaluates SET left to right, so locked_until
   // must come first to see the OLD failed_logins value.
@@ -120,7 +139,8 @@ module.exports = {
   findByEmail,
   findAuthByEmail,
   create,
+  completeOnboarding,
   recordFailedLogin,
   clearFailedLogins,
-  hashPassword
+  hashPassword,
 };
