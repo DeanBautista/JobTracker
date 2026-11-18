@@ -43,3 +43,8 @@ export async function completeOnboarding() {
   const { data } = await api.post("/users/me/onboarding");
   return data; // user
 }
+
+export async function demoLogin() {
+  const { data } = await api.post("/auth/demo", {}, { skipAuthRefresh: true });
+  return data; // { accessToken, user }
+}

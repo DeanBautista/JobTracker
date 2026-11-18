@@ -40,6 +40,14 @@ export default function AuthProvider({ children }) {
     return user;
   }, []);
 
+  const demoLogin = useCallback(async () => {
+    const { accessToken, user } = await authApi.demoLogin();
+    setAccessToken(accessToken);
+    setUser(user);
+    setStatus("authenticated");
+    return user;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
@@ -66,8 +74,8 @@ export default function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, status, login, logout, verifyEmail, completeOnboarding }),
-    [user, status, login, logout, verifyEmail, completeOnboarding]
+    () => ({ user, status, login, demoLogin, logout, verifyEmail, completeOnboarding }),
+    [user, status, login, demoLogin, logout, verifyEmail, completeOnboarding]
   );
   
 

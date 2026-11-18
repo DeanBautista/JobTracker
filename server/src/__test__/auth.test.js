@@ -345,3 +345,39 @@ describe('POST /auth/logout', () => {
     expect(res.headers['set-cookie'][0]).toContain('refresh_token=;');
   });
 });
+
+describe('POST /auth/demo', () => {
+  test('signs in the demo user without a password', async () => {
+    const demo = { id: 165, name: 'Demo Account', email: 'demo.account@gmail.com', is_demo: 1 };
+    userModel.findByEmail.mockResolvedValue(demo);
+
+    const res = await request(app).post('/auth/demo');
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.user).toEqual(demo);
+    const payload = jwt.verify(res.body.accessToken, process.env.ACCESS_TOKEN_SECRET);
+    expect(payload.sub).toBe('165');
+    expect(res.headers['set-cookie'][0]).toMatch(/^refresh_token=[0-9a-f]{96};/);
+    expect(sessionModel.create).toHaveBeenCalledTimes(1);
+    expect(userModel.findAuthByEmail).not.toHaveBeenCalled();
+  });
+
+  test('returns 403 demo_unavailable when the user is missing', async () => {
+    userModel.findByEmail.mockResolvedValue(undefined);
+
+    const res = await request(app).post('/auth/demo');
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('demo_unavailable');
+    expect(sessionModel.create).not.toHaveBeenCalled();
+  });
+
+  test('returns 403 when the account is not flagged is_demo', async () => {
+    userModel.findByEmail.mockResolvedValue({ id: 1, email: 'demo.account@gmail.com', is_demo: 0 });
+
+    const res = await request(app).post('/auth/demo');
+
+    expect(res.statusCode).toBe(403);
+    expect(sessionModel.create).not.toHaveBeenCalled();
+  });
+});

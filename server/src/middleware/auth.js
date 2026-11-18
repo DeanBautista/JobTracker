@@ -1,4 +1,5 @@
 const AppError = require('../utils/AppError');
+const userModel = require('../models/userModel');
 const { verifyAccessToken } = require('../utils/tokens');
 
 function requireAuth(req, res, next) {
@@ -13,4 +14,17 @@ function requireAuth(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth };
+  async function blockDemo(req, res, next) {
+  try {
+    const user = await userModel.findById(req.userId);
+    if (!user) return next(AppError.unauthorized('invalid_token'));
+    if (user.is_demo) {
+      return next(AppError.forbidden('demo_restricted', 'Not available on the demo account'));
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { requireAuth, blockDemo };

@@ -173,6 +173,17 @@ describe('POST /auth/forgot-password', () => {
     expect(res.statusCode).toBe(204);
     errorSpy.mockRestore();
   });
+
+  test('forgot-password sends nothing for the demo user', async () => {
+    userModel.findByEmail.mockResolvedValue({ id: 165, email: 'demo.account@gmail.com', is_demo: 1 });
+
+    const res = await request(app)
+      .post('/auth/forgot-password')
+      .send({ email: 'demo.account@gmail.com' });
+
+    expect(res.statusCode).toBe(204);
+    expect(userTokenModel.createResetToken).not.toHaveBeenCalled();
+  });
 });
 
 describe('POST /auth/reset-password', () => {
