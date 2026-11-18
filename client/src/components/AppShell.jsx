@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
+import DemoBanner from "./DemoBanner";
+import { useAuth } from "@/features/auth/context/useAuth";
 import MobileTabBar from "./MobileTabBar";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { AddJobProvider } from "@/features/jobs";
 
 export default function AppShell() {
+
+  const { user } = useAuth();
+
   const [navOpen, setNavOpen] = useState(false);
 
   return (
@@ -22,6 +27,7 @@ export default function AppShell() {
 
         <div className="flex min-w-0 flex-col">
           <Topbar onMenuClick={() => setNavOpen(true)} />
+          {user?.is_demo ? <DemoBanner /> : null}
           <main
             id="main"
             className="mx-auto w-full max-w-content px-4 pt-5 pb-25 shell:px-7 shell:pt-7 shell:pb-18"
