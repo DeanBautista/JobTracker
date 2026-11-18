@@ -7,6 +7,7 @@ const authRouter = require('./routes/auth');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const jobsRouter = require('./routes/jobs');
 const oauthRouter = require('./routes/oauth');
+const demoRouter = require('./routes/demo');
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/users', usersRouter);
 app.use('/auth', authRouter);
 app.use('/auth', oauthRouter);
 app.use('/jobs', jobsRouter);
+app.use('/demo', demoRouter);
 
 app.use(notFound);
 app.use(errorHandler);
