@@ -7,13 +7,15 @@ const {
   verifyEmail,
   resendVerification,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  demoLogin
 } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
 router.post('/login', login);
+router.post('/demo', demoLogin);
 router.post('/refresh', refresh);
 router.post('/logout', logout);
 router.get('/me', requireAuth, me);

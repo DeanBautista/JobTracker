@@ -4,6 +4,7 @@ const oauthModel = require('../models/oauthModel');
 const { startSession } = require('./authController');
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const DEMO_EMAIL = (process.env.DEMO_EMAIL || 'demo.account@gmail.com').toLowerCase();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const b64url = (buf) => buf.toString('base64url');
@@ -150,6 +151,7 @@ const callback = (provider) => async (req, res) => {
   try {
     const profile = await PROVIDERS[provider].fetchProfile(code, tmp.verifier);
     if (!profile.email || !profile.emailVerified) return fail(res, 'oauth_email_unverified');
+    if (profile.email.toLowerCase() === DEMO_EMAIL) return fail(res, 'demo_restricted');
 
     const userId = await oauthModel.findOrCreateUser(provider, profile);
     await startSession(req, res, userId);

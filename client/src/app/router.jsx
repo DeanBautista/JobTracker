@@ -17,9 +17,10 @@ import DashboardPage from "@/features/dashboard/pages/DashboardPage";
 import { JobsListPage } from "@/features/jobs";
 import { JobDetailPage } from "@/features/job-detail";
 import { OnboardingPage } from "@/features/onboarding";
+import { LandingPage } from "@/features/landing";
 
 const router = createBrowserRouter([
-  { path: "/", element: <Navigate to="/dashboard" replace /> },
+  // { path: "/", element: <Navigate to="/dashboard" replace /> },
 
   // Outside GuestRoute on purpose: verifying signs the user in, and GuestRoute
   // would redirect them to the dashboard before the success screen shows.
@@ -29,6 +30,7 @@ const router = createBrowserRouter([
   {
     element: <GuestRoute />,
     children: [
+      { path: "/", element: <LandingPage /> },
       { path: "/register", element: <SignUpPage /> },
       { path: "/login", element: <SignInPage /> },
       { path: "/forgot-password", element: <ForgotPasswordPage /> },

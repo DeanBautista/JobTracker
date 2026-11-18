@@ -162,7 +162,7 @@ const forgotPassword = async (req, res) => {
   validateForgotPassword(body);
 
   const user = await userModel.findByEmail(body.email);
-  if (user && !(await userTokenModel.sentRecently(user.id, RESEND_COOLDOWN_SECONDS, 'reset_password'))) {
+  if (user && !user.is_demo && !(await userTokenModel.sentRecently(user.id, RESEND_COOLDOWN_SECONDS, 'reset_password'))) {
     try {
       await userTokenModel.invalidateResetTokens(user.id);
       const token = await userTokenModel.createResetToken(user.id);
@@ -191,7 +191,17 @@ const resetPassword = async (req, res) => {
   res.status(204).end();
 };
 
+// POST /auth/demo
+const demoLogin = async (req, res) => {
+  const user = await userModel.findByEmail(process.env.DEMO_EMAIL || 'demo.account@gmail.com');
+  if (!user || !user.is_demo) {
+    throw AppError.forbidden('demo_unavailable', 'Demo account is not available');
+  }
+  const accessToken = await startSession(req, res, user.id);
+  res.json({ accessToken, user });
+};
+
 module.exports = {
   login, refresh, logout, me, verifyEmail, resendVerification, forgotPassword, resetPassword,
-  startSession,
+  startSession, demoLogin
 };
