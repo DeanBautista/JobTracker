@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import Modal from "@/components/Modal";
 import { FIELD_CLASS, TEXTAREA_CLASS } from "@/features/jobs/utils/jobFormOptions";
-import { CLOSE_REASONS, STAGE_LABELS } from "../utils/boardStages";
+import { CLOSE_REASONS, STAGE_LABELS } from "../../../board/utils/boardStages";
 
 export default function CloseReasonDialog({ job, stage, onConfirm, onCancel }) {
   const [reason, setReason] = useState("");
