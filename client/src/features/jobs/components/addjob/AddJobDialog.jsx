@@ -5,7 +5,7 @@ import { FIELD_CLASS, STAGE_OPTIONS } from "../../utils/jobFormOptions";
 import AddJobMoreDetails from "./AddJobMoreDetails";
 import JobField from "../shared/JobField";
 
-export default function AddJobDialog({ onClose, onCreated }) {
+export default function AddJobDialog({ onClose, onCreated, initialStage = "wishlist" }) {
   const { errors, formError, duplicate, saving, submit, clearDuplicate } = useAddJobForm({
     onDone: onClose,
     onCreated,
@@ -68,7 +68,7 @@ export default function AddJobDialog({ onClose, onCreated }) {
 
             <JobField label="Stage">
               {(p) => (
-                <select {...p} name="stage" defaultValue="wishlist" className={FIELD_CLASS}>
+                <select {...p} name="stage" defaultValue={initialStage} className={FIELD_CLASS}>
                   {STAGE_OPTIONS.map(({ value, label }) => (
                     <option key={value} value={value}>{label}</option>
                   ))}

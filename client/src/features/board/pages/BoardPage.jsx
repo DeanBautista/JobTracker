@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAddJob } from "@/features/jobs";
 import Board from "../components/board/Board";
 import BoardActiveFilters from "../components/board/BoardActiveFilters";
 import BoardFilters from "../components/board/BoardFilters";
@@ -14,7 +15,7 @@ import { filterJobs, groupByStage } from "../utils/boardFilters";
 import { CLOSED_STAGES, isClosedStage } from "../utils/boardStages";
 
 export default function BoardPage() {
-  const navigate = useNavigate();
+  const { openAddJob } = useAddJob();
   const { filters, activeFilters, preview, applyFilters, clearFilters, removeFilter } = useBoardFilters();
   const { status, jobs, retry, moveJob, undoMove, lastMove, moveError, clearNotice, archive, remove } = useBoardJobs({ preview });
 
@@ -33,7 +34,7 @@ export default function BoardPage() {
   const showBoard = status === "success" && visibleJobs.length > 0;
 
   // If useAddJob() exposes an "open dialog with a preset stage", call that here instead.
-  const addJob = (stage) => navigate(`/jobs/new?stage=${stage ?? "wishlist"}`);
+  const addJob = (stage) => openAddJob({ stage: stage ?? "wishlist" });
 
   return (
     <>
