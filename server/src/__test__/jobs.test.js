@@ -214,3 +214,97 @@ describe('GET /jobs', () => {
     );
   });
 });
+
+describe('GET /jobs?view=board', () => {
+  test('returns 401 without a token', async () => {
+    const res = await request(app).get('/jobs?view=board');
+
+    expect(res.statusCode).toBe(401);
+    expect(jobModel.listBoard).not.toHaveBeenCalled();
+  });
+
+  test('returns every board job for the signed-in user, without paging', async () => {
+    const jobs = [{ id: 1, title: 'Dev', stage: 'wishlist', position: 0 }];
+    jobModel.listBoard.mockResolvedValue(jobs);
+
+    const res = await request(app).get('/jobs?view=board').set(auth());
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ jobs });
+    expect(jobModel.listBoard).toHaveBeenCalledWith(147);
+    expect(jobModel.list).not.toHaveBeenCalled();
+  });
+});
+
+describe('PATCH /jobs/:id/move', () => {
+  const body = { stage: 'applied', position: 1500.5 };
+
+  test('returns 401 without a token', async () => {
+    const res = await request(app).patch('/jobs/5/move').send(body);
+
+    expect(res.statusCode).toBe(401);
+    expect(jobModel.move).not.toHaveBeenCalled();
+  });
+
+  test('moves the job and returns the result', async () => {
+    const result = { id: 5, stage: 'applied', position: 1500.5, changed: true };
+    jobModel.move.mockResolvedValue(result);
+
+    const res = await request(app).patch('/jobs/5/move').set(auth()).send(body);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual(result);
+    expect(jobModel.move).toHaveBeenCalledWith(147, 5, { stage: 'applied', position: 1500.5 });
+  });
+
+  test('accepts position 0 and closed stages', async () => {
+    jobModel.move.mockResolvedValue({ id: 5, stage: 'ghosted', position: 0, changed: true });
+
+    const res = await request(app).patch('/jobs/5/move').set(auth()).send({ stage: 'ghosted', position: 0 });
+
+    expect(res.statusCode).toBe(200);
+    expect(jobModel.move).toHaveBeenCalledWith(147, 5, { stage: 'ghosted', position: 0 });
+  });
+
+  test('returns 422 for an unknown stage', async () => {
+    const res = await request(app).patch('/jobs/5/move').set(auth()).send({ stage: 'archived', position: 1 });
+
+    expect(res.statusCode).toBe(422);
+    expect(jobModel.move).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['missing', undefined],
+    ['a string', '5'],
+    ['not finite', null],
+    ['out of range', 1e15],
+  ])('returns 422 when position is %s', async (_label, position) => {
+    const res = await request(app).patch('/jobs/5/move').set(auth()).send({ stage: 'applied', position });
+
+    expect(res.statusCode).toBe(422);
+    expect(jobModel.move).not.toHaveBeenCalled();
+  });
+
+  test('returns 422 when the id is not an integer', async () => {
+    const res = await request(app).patch('/jobs/abc/move').set(auth()).send(body);
+
+    expect(res.statusCode).toBe(422);
+    expect(jobModel.move).not.toHaveBeenCalled();
+  });
+
+  test('returns 404 when the job is not the signed-in user\'s', async () => {
+    jobModel.move.mockResolvedValue(null);
+
+    const res = await request(app).patch('/jobs/5/move').set(auth()).send(body);
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  test('uses the user id from the token, never from the body', async () => {
+    jobModel.move.mockResolvedValue({ id: 5, stage: 'applied', position: 1, changed: false });
+
+    await request(app).patch('/jobs/5/move').set(auth()).send({ ...body, user_id: 999, userId: 999 });
+
+    expect(jobModel.move).toHaveBeenCalledWith(147, 5, expect.any(Object));
+  });
+});

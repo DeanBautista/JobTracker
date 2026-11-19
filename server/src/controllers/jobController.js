@@ -1,10 +1,14 @@
 const jobModel = require('../models/jobModel');
 const { validateCreateJob, parseListQuery } = require('../validators/jobValidator');
 
-// GET /jobs
+// GET /jobs            -> paginated list page, { jobs, total }
+// GET /jobs?view=board -> every board job, { jobs }
 const listJobs = async (req, res) => {
+  if (req.query.view === 'board') {
+    return res.json({ jobs: await jobModel.listBoard(req.userId) });
+  }
   const result = await jobModel.list(req.userId, parseListQuery(req.query));
-  res.json(result); // { jobs, total }
+  res.json(result);
 };
 
 // POST /jobs
@@ -21,4 +25,18 @@ const createJob = async (req, res) => {
   res.status(201).json(job);
 };
 
-module.exports = { createJob, listJobs };
+// PATCH /jobs/:id/move  { stage, position }
+const moveJob = async (req, res) => {
+  const id = Number(req.params.id);
+  const { stage, position } = req.body || {};
+
+  if (!Number.isInteger(id) || !jobModel.STAGES.includes(stage) || !Number.isFinite(position) || Math.abs(position) > 1e12) {
+    return res.status(422).json({ errors: { move: 'Invalid stage or position' } });
+  }
+
+  const result = await jobModel.move(req.userId, id, { stage, position });
+  if (!result) return res.status(404).json({ error: 'Job not found' });
+  res.json(result);
+};
+
+module.exports = { createJob, listJobs, moveJob };
