@@ -61,8 +61,9 @@ jest.mock('./models/jobModel', () => ({
   list: jest.fn(),
   listBoard: jest.fn(),
   move: jest.fn(),
-  // Plain array (not jest.fn), so resetAllMocks leaves it alone.
+  // Plain arrays (not jest.fn), so resetAllMocks leaves them alone.
   STAGES: ['wishlist', 'applied', 'screening', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn', 'ghosted'],
+  CLOSE_REASONS: ['not_enough_experience', 'position_closed', 'salary_mismatch', 'took_another_offer', 'no_response', 'other'],
 }));
 
 jest.mock('./utils/mailer', () => ({

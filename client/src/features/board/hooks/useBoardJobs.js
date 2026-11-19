@@ -70,7 +70,7 @@ export default function useBoardJobs({ preview } = {}) {
    *   restore   { stage, stageEnteredAt, position } to put a job back exactly (Undo)
    */
   const moveJob = useCallback(
-    (id, stage, { beforeId, silent = false, restore } = {}) => {
+    (id, stage, { beforeId, silent = false, restore, closing } = {}) => {
       const job = jobsRef.current.find((j) => j.id === id);
       if (!job) return;
       if (beforeId === id) return;
@@ -116,7 +116,7 @@ export default function useBoardJobs({ preview } = {}) {
           : { key: Date.now(), id, title: job.title, from: previous.stage, to: stage, previous },
       );
 
-      moveJobStage(id, { stage, position }).catch(() => {
+      moveJobStage(id, { stage, position, closedReason: closing?.reason, closingNote: closing?.note }).catch(() => {
         // Only roll back if the card is still where we put it.
         const now = jobsRef.current.find((j) => j.id === id);
         if (!now || now.stage !== stage || now.position !== position) return;

@@ -3,6 +3,16 @@ const { hashUrl } = require('../utils/urlHash');
 
 const CLOSED_STATUSES = ['accepted', 'rejected', 'withdrawn', 'ghosted'];
 
+// Must match applications.closed_reason.
+const CLOSE_REASONS = [
+  'not_enough_experience',
+  'position_closed',
+  'salary_mismatch',
+  'took_another_offer',
+  'no_response',
+  'other',
+];
+
 const STAGES = ['wishlist', 'applied', 'screening', 'interview', 'offer', ...CLOSED_STATUSES];
 
 // One shape for the list and for a newly created job. Dates are formatted in SQL so
@@ -165,7 +175,7 @@ async function create(userId, v) {
 
 // Drag-and-drop / "Move to" menu. A same-column reorder only changes board_position.
 // A stage change also resets the stage clock, logs history, and sets/clears the closed_* fields.
-async function move(userId, id, { stage, position }) {
+async function move(userId, id, { stage, position, closedReason = null, closingNote = null }) {
   return knex.transaction(async (trx) => {
     const job = await trx('applications')
       .where({ id, user_id: userId })
@@ -187,11 +197,14 @@ async function move(userId, id, { stage, position }) {
         last_activity_at: knex.fn.now(),
       });
 
-      if (nowClosed && !wasClosed) {
-        patch.closed_stage = job.status;
-        patch.closed_at = knex.fn.now();
-      }
-      if (!nowClosed) {
+      if (nowClosed) {
+        patch.closed_reason = closedReason;
+        patch.closing_note = closingNote;
+        if (!wasClosed) {
+          patch.closed_stage = job.status; // the stage it was in when it closed
+          patch.closed_at = knex.fn.now();
+        }
+      } else {
         Object.assign(patch, { closed_stage: null, closed_at: null, closed_reason: null, closing_note: null });
       }
 
@@ -247,4 +260,4 @@ async function listBoard(userId) {
   return rows.map((row) => ({ ...row, interviewAt: at.get(row.id) ?? null }));
 }
 
-module.exports = { list, listBoard, findById, findDuplicate, create, move, STAGES };
+module.exports = { list, listBoard, findById, findDuplicate, create, move, STAGES, CLOSE_REASONS };
