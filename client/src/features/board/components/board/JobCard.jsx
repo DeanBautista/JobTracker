@@ -59,7 +59,9 @@ export default function JobCard({ job, onMove, onArchive, onDelete, overlay = fa
         )}
       >
         <div className="mb-[11px] flex min-h-[21px] flex-wrap items-center gap-[5px] pr-12">
-          <span className={cx(badge, "border-rule bg-paper text-muted")}>{MODE_LABELS[job.mode]}</span>
+          {MODE_LABELS[job.mode] && (
+            <span className={cx(badge, "border-rule bg-paper text-muted")}>{MODE_LABELS[job.mode]}</span>
+          )}
           <span className={cx(badge, PRIORITY_STYLES[job.priority])}>{PRIORITY_LABELS[job.priority]} priority</span>
         </div>
 
@@ -67,7 +69,7 @@ export default function JobCard({ job, onMove, onArchive, onDelete, overlay = fa
           {job.title}
         </h3>
         <p className="mb-[5px] text-[13px] text-muted">{job.company}</p>
-        <p className="text-xs leading-[1.35] text-muted">{job.location}</p>
+        {job.location && <p className="text-xs leading-[1.35] text-muted">{job.location}</p>}
 
         {closed && (
           <span className={cx(badge, "mt-2 border-rule bg-tint")}>{STAGE_LABELS[job.stage]}</span>
