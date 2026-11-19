@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import {
   SignInPage,
   SignUpPage,
@@ -18,6 +18,7 @@ import { JobsListPage } from "@/features/jobs";
 import { JobDetailPage } from "@/features/job-detail";
 import { OnboardingPage } from "@/features/onboarding";
 import { LandingPage } from "@/features/landing";
+import { BoardPage } from "@/features/board";
 
 const router = createBrowserRouter([
   // { path: "/", element: <Navigate to="/dashboard" replace /> },
@@ -51,6 +52,7 @@ const router = createBrowserRouter([
             children: [
               { path: "/dashboard", element: <DashboardPage /> },
               { path: "/jobs", element: <JobsListPage /> },
+              { path: "/board", element: <BoardPage /> },
               { path: "/job/:id", element: <JobDetailPage /> },
             ],
           },
