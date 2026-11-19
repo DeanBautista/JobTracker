@@ -3,6 +3,8 @@ const { hashUrl } = require('../utils/urlHash');
 
 const CLOSED_STATUSES = ['accepted', 'rejected', 'withdrawn', 'ghosted'];
 
+const STAGES = ['wishlist', 'applied', 'screening', 'interview', 'offer', ...CLOSED_STATUSES];
+
 // One shape for the list and for a newly created job. Dates are formatted in SQL so
 // the driver never turns them into JS Dates (which shift with the timezone).
 const JOB_COLUMNS = [
@@ -161,4 +163,88 @@ async function create(userId, v) {
   return findById(userId, id);
 }
 
-module.exports = { list, findById, findDuplicate, create };
+// Drag-and-drop / "Move to" menu. A same-column reorder only changes board_position.
+// A stage change also resets the stage clock, logs history, and sets/clears the closed_* fields.
+async function move(userId, id, { stage, position }) {
+  return knex.transaction(async (trx) => {
+    const job = await trx('applications')
+      .where({ id, user_id: userId })
+      .whereNull('deleted_at')
+      .forUpdate()
+      .first('status');
+    if (!job) return null;
+
+    const patch = { board_position: position };
+    const changed = job.status !== stage;
+
+    if (changed) {
+      const wasClosed = CLOSED_STATUSES.includes(job.status);
+      const nowClosed = CLOSED_STATUSES.includes(stage);
+
+      Object.assign(patch, {
+        status: stage,
+        stage_changed_at: knex.fn.now(),
+        last_activity_at: knex.fn.now(),
+      });
+
+      if (nowClosed && !wasClosed) {
+        patch.closed_stage = job.status;
+        patch.closed_at = knex.fn.now();
+      }
+      if (!nowClosed) {
+        Object.assign(patch, { closed_stage: null, closed_at: null, closed_reason: null, closing_note: null });
+      }
+
+      await trx('status_history').insert({ application_id: id, from_status: job.status, to_status: stage });
+    }
+
+    await trx('applications').where({ id, user_id: userId }).update(patch);
+    return { id, stage, position, changed };
+  });
+}
+
+// Everything the board needs, in one shot: all non-archived, non-trashed jobs, no pagination.
+// Timestamps are stored in UTC, so they go out as ISO strings with a Z.
+// DATE columns go out as local midnight (no Z) so "Deadline in 2 days" never shifts a day
+// for users west of UTC.
+async function listBoard(userId) {
+  const rows = await knex('applications as a')
+    .join('companies as c', 'c.id', 'a.company_id')
+    .select(
+      'a.id',
+      'a.title',
+      'c.name as company',
+      'a.status as stage',
+      'a.priority',
+      'a.work_mode as mode',
+      'a.location',
+      'a.board_position as position',
+      knex.raw("DATE_FORMAT(a.stage_changed_at, '%Y-%m-%dT%H:%i:%sZ') AS stageEnteredAt"),
+      knex.raw("DATE_FORMAT(a.deadline, '%Y-%m-%dT00:00:00') AS deadline"),
+      knex.raw("DATE_FORMAT(a.offer_respond_by, '%Y-%m-%dT00:00:00') AS replyBy"),
+    )
+    .where('a.user_id', userId)
+    .whereNull('a.deleted_at')
+    .whereNull('a.archived_at')
+    .orderBy('a.status')
+    .orderBy('a.board_position');
+
+  if (rows.length === 0) return [];
+
+  // Next scheduled interview per job (a round from the last day still counts, so
+  // "Today" keeps showing after the time passes).
+  const interviews = await knex('interviews')
+    .select(
+      'application_id',
+      knex.raw("DATE_FORMAT(MIN(scheduled_at), '%Y-%m-%dT%H:%i:%sZ') AS interviewAt"),
+    )
+    .whereIn('application_id', rows.map((r) => r.id))
+    .where('outcome', 'scheduled')
+    .whereRaw('scheduled_at >= NOW() - INTERVAL 1 DAY')
+    .groupBy('application_id');
+
+  const at = new Map(interviews.map((i) => [i.application_id, i.interviewAt]));
+  return rows.map((row) => ({ ...row, interviewAt: at.get(row.id) ?? null }));
+}
+
+module.exports = { list, listBoard, findById, findDuplicate, create, move, STAGES };

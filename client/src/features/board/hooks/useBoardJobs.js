@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { fetchBoardJobs, moveJobStage } from "../api/boardApi";
+import AddJobContext from "@/features/jobs/context/AddJobContext"; // same file useJobs imports
 
 const GAP = 1000;
 const byPosition = (a, b) => a.position - b.position;
@@ -14,6 +15,8 @@ const byPosition = (a, b) => a.position - b.position;
  * gives the job the midpoint of their positions, so only that one job is written.
  */
 export default function useBoardJobs({ preview } = {}) {
+  const jobsVersion = useContext(AddJobContext)?.jobsVersion ?? 0;
+  const loadedRef = useRef(false); // true after the first successful load
   const [status, setStatus] = useState("loading"); // loading | success | error
   const [jobs, setJobs] = useState([]);
   const [lastMove, setLastMove] = useState(null); // drives the Undo toast
@@ -30,18 +33,26 @@ export default function useBoardJobs({ preview } = {}) {
 
   useEffect(() => {
     let cancelled = false;
-    setStatus("loading");
+    // Only the first load (and retries) shows the skeleton. A refetch after adding a job
+    // updates the board in place instead of flashing it.
+    if (!loadedRef.current) setStatus("loading");
+
     fetchBoardJobs({ preview })
       .then((data) => {
         if (cancelled) return;
         commit(data);
+        loadedRef.current = true;
         setStatus("success");
       })
-      .catch(() => !cancelled && setStatus("error"));
+      .catch(() => {
+        // A failed background refetch keeps the cards you already have.
+        if (!cancelled && !loadedRef.current) setStatus("error");
+      });
+
     return () => {
       cancelled = true;
     };
-  }, [preview, attempt, commit]);
+  }, [preview, attempt, jobsVersion, commit]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 

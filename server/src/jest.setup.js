@@ -59,6 +59,10 @@ jest.mock('./models/jobModel', () => ({
   findDuplicate: jest.fn(),
   findById: jest.fn(),
   list: jest.fn(),
+  listBoard: jest.fn(),
+  move: jest.fn(),
+  // Plain array (not jest.fn), so resetAllMocks leaves it alone.
+  STAGES: ['wishlist', 'applied', 'screening', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn', 'ghosted'],
 }));
 
 jest.mock('./utils/mailer', () => ({
