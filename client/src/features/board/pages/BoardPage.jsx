@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useAddJob } from "@/features/jobs";
-import CloseReasonDialog from "@/features/board/components/CloseReasonDialog";
+import CloseReasonDialog from "@/features/jobs/components/shared/CloseReasonDialog";
 import Board from "../components/board/Board";
 import BoardActiveFilters from "../components/board/BoardActiveFilters";
 import BoardFilters from "../components/board/BoardFilters";
