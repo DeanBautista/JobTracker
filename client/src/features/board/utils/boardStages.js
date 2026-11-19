@@ -35,5 +35,18 @@ export const PRIORITIES = [
   { value: "high", label: "High" },
 ];
 
+// Moving into one of these asks why the job closed. Accepted doesn't.
+export const REASON_STAGES = ["rejected", "withdrawn", "ghosted"];
+
+// Values must match applications.closed_reason.
+export const CLOSE_REASONS = [
+  { value: "not_enough_experience", label: "Not enough experience" },
+  { value: "position_closed", label: "Position closed" },
+  { value: "salary_mismatch", label: "Salary mismatch" },
+  { value: "took_another_offer", label: "Took another offer" },
+  { value: "no_response", label: "No response" },
+  { value: "other", label: "Other" },
+];
+
 export const MODE_LABELS = Object.fromEntries(WORK_MODES.map((m) => [m.value, m.label]));
 export const PRIORITY_LABELS = Object.fromEntries(PRIORITIES.map((p) => [p.value, p.label]));

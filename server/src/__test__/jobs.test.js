@@ -307,4 +307,28 @@ describe('PATCH /jobs/:id/move', () => {
 
     expect(jobModel.move).toHaveBeenCalledWith(147, 5, expect.any(Object));
   });
+
+  test('passes the closing reason and note to the model', async () => {
+    jobModel.move.mockResolvedValue({ id: 5, stage: 'rejected', position: 1, changed: true });
+
+    const res = await request(app)
+      .patch('/jobs/5/move')
+      .set(auth())
+      .send({ stage: 'rejected', position: 1, closedReason: 'position_closed', closingNote: 'Role was filled' });
+
+    expect(res.statusCode).toBe(200);
+    expect(jobModel.move).toHaveBeenCalledWith(147, 5, {
+      stage: 'rejected', position: 1, closedReason: 'position_closed', closingNote: 'Role was filled',
+    });
+  });
+
+  test('returns 422 for an unknown closing reason', async () => {
+    const res = await request(app)
+      .patch('/jobs/5/move')
+      .set(auth())
+      .send({ stage: 'rejected', position: 1, closedReason: 'bored' });
+
+    expect(res.statusCode).toBe(422);
+    expect(jobModel.move).not.toHaveBeenCalled();
+  });
 });

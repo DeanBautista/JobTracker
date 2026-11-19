@@ -25,16 +25,26 @@ const createJob = async (req, res) => {
   res.status(201).json(job);
 };
 
-// PATCH /jobs/:id/move  { stage, position }
+// PATCH /jobs/:id/move  { stage, position, closedReason?, closingNote? }
 const moveJob = async (req, res) => {
   const id = Number(req.params.id);
-  const { stage, position } = req.body || {};
+  const { stage, position, closedReason, closingNote } = req.body || {};
 
-  if (!Number.isInteger(id) || !jobModel.STAGES.includes(stage) || !Number.isFinite(position) || Math.abs(position) > 1e12) {
-    return res.status(422).json({ errors: { move: 'Invalid stage or position' } });
+  const badReason = closedReason != null && !jobModel.CLOSE_REASONS.includes(closedReason);
+  const badNote = closingNote != null && (typeof closingNote !== 'string' || closingNote.length > 1000);
+
+  if (
+    !Number.isInteger(id) ||
+    !jobModel.STAGES.includes(stage) ||
+    !Number.isFinite(position) ||
+    Math.abs(position) > 1e12 ||
+    badReason ||
+    badNote
+  ) {
+    return res.status(422).json({ errors: { move: 'Invalid move' } });
   }
 
-  const result = await jobModel.move(req.userId, id, { stage, position });
+  const result = await jobModel.move(req.userId, id, { stage, position, closedReason, closingNote });
   if (!result) return res.status(404).json({ error: 'Job not found' });
   res.json(result);
 };

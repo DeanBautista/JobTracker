@@ -1,6 +1,6 @@
-import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
 import { useAddJob } from "@/features/jobs";
+import CloseReasonDialog from "@/features/board/components/CloseReasonDialog";
 import Board from "../components/board/Board";
 import BoardActiveFilters from "../components/board/BoardActiveFilters";
 import BoardFilters from "../components/board/BoardFilters";
@@ -12,7 +12,7 @@ import StageJumpNav from "../components/board/StageJumpNav";
 import useBoardFilters from "../hooks/useBoardFilters";
 import useBoardJobs from "../hooks/useBoardJobs";
 import { filterJobs, groupByStage } from "../utils/boardFilters";
-import { CLOSED_STAGES, isClosedStage } from "../utils/boardStages";
+import { CLOSED_STAGES, REASON_STAGES, isClosedStage } from "../utils/boardStages";
 
 export default function BoardPage() {
   const { openAddJob } = useAddJob();
@@ -36,6 +36,19 @@ export default function BoardPage() {
   // If useAddJob() exposes an "open dialog with a preset stage", call that here instead.
   const addJob = (stage) => openAddJob({ stage: stage ?? "wishlist" });
 
+  // Moving into Rejected / Withdrawn / Ghosted asks for a reason first.
+  // The card stays put until the dialog is confirmed; Cancel leaves it where it was.
+  const [pendingClose, setPendingClose] = useState(null); // { id, job, stage, options }
+
+  const handleMove = (id, stage, options) => {
+    const job = jobs.find((j) => j.id === id);
+    if (job && job.stage !== stage && REASON_STAGES.includes(stage)) {
+      setPendingClose({ id, job, stage, options });
+      return;
+    }
+    moveJob(id, stage, options);
+  };
+
   return (
     <>
       <BoardHeader openTotal={openTotal} openMatches={openMatches} hasFilters={hasFilters} />
@@ -58,7 +71,7 @@ export default function BoardPage() {
         <Board
           groups={groups}
           jobs={visibleJobs}
-          onMove={moveJob}
+          onMove={handleMove}
           onAddJob={addJob}
           onArchive={archive}
           onDelete={remove}
@@ -66,6 +79,18 @@ export default function BoardPage() {
       )}
 
       <BoardToast move={lastMove} error={moveError} onUndo={undoMove} onDismiss={clearNotice} />
+
+      {pendingClose && (
+        <CloseReasonDialog
+          job={pendingClose.job}
+          stage={pendingClose.stage}
+          onCancel={() => setPendingClose(null)}
+          onConfirm={(closing) => {
+            moveJob(pendingClose.id, pendingClose.stage, { ...pendingClose.options, closing });
+            setPendingClose(null);
+          }}
+        />
+      )}
     </>
   );
 }

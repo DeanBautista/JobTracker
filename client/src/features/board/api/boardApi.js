@@ -13,7 +13,7 @@ export async function fetchBoardJobs({ preview } = {}) {
 
 // One row changes per move, whether the card changed column or just moved up/down.
 // useBoardJobs already updates the UI first and rolls back if this rejects.
-export async function moveJobStage(id, { stage, position }) {
+export async function moveJobStage(id, { stage, position, closedReason, closingNote }) {
   if (mockControls.failMoves) throw new Error(`Could not move job ${id} to ${stage}`);
-  await api.patch(`/jobs/${id}/move`, { stage, position });
+  await api.patch(`/jobs/${id}/move`, { stage, position, closedReason, closingNote });
 }
