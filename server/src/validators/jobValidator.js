@@ -8,6 +8,8 @@ const SORT_KEYS = ['title', 'company', 'stage', 'priority', 'applied', 'days'];
 const PAGE_SIZES = [10, 25, 50];
 const DATE_RANGES = [30, 90];
 
+const MAX_BULK = 100;
+
 const text = (v) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null);
 const isBlank = (v) => v === undefined || v === null || v === '';
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
@@ -149,4 +151,12 @@ function parseListQuery(query) {
   };
 }
 
-module.exports = { validateCreateJob, parseListQuery };
+// Returns a de-duplicated array of positive integer ids, or null if invalid.
+function parseIds(value) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_BULK) return null;
+  const ids = value.map(Number);
+  if (!ids.every((n) => Number.isInteger(n) && n > 0)) return null;
+  return [...new Set(ids)];
+}
+
+module.exports = { validateCreateJob, parseListQuery, parseIds, MAX_BULK };

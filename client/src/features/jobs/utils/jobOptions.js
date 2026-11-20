@@ -13,6 +13,25 @@ export const CLOSED_STAGES = [
   { value: "ghosted", label: "Ghosted" },
 ];
 
+export const ALL_STAGES = [...OPEN_STAGES, ...CLOSED_STAGES];
+export const STAGE_LABELS = Object.fromEntries(ALL_STAGES.map((s) => [s.value, s.label]));
+
+const CLOSED_VALUES = new Set(CLOSED_STAGES.map((s) => s.value));
+export const isClosedStage = (stage) => CLOSED_VALUES.has(stage);
+
+// Moving into one of these asks why the job closed. Accepted doesn't.
+export const REASON_STAGES = ["rejected", "withdrawn", "ghosted"];
+
+// Values must match applications.closed_reason.
+export const CLOSE_REASONS = [
+  { value: "not_enough_experience", label: "Not enough experience" },
+  { value: "position_closed", label: "Position closed" },
+  { value: "salary_mismatch", label: "Salary mismatch" },
+  { value: "took_another_offer", label: "Took another offer" },
+  { value: "no_response", label: "No response" },
+  { value: "other", label: "Other" },
+];
+
 export const MODES = [
   { value: "onsite", label: "Onsite" },
   { value: "hybrid", label: "Hybrid" },

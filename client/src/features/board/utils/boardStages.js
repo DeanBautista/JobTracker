@@ -1,27 +1,7 @@
-// Board stages. If jobOptions.js already defines these, import from there instead
-// and delete the duplicates. Values must match what your API stores.
-export const OPEN_STAGES = [
-  { value: "wishlist", label: "Wishlist" },
-  { value: "applied", label: "Applied" },
-  { value: "screening", label: "Screening" },
-  { value: "interview", label: "Interview" },
-  { value: "offer", label: "Offer" },
-];
-
-// Shown together in the collapsible "Closed" column.
-export const CLOSED_STAGES = [
-  { value: "accepted", label: "Accepted" },
-  { value: "rejected", label: "Rejected" },
-  { value: "withdrawn", label: "Withdrawn" },
-  { value: "ghosted", label: "Ghosted" },
-];
-
-export const ALL_STAGES = [...OPEN_STAGES, ...CLOSED_STAGES];
-
-export const STAGE_LABELS = Object.fromEntries(ALL_STAGES.map((s) => [s.value, s.label]));
-
-const CLOSED_VALUES = new Set(CLOSED_STAGES.map((s) => s.value));
-export const isClosedStage = (stage) => CLOSED_VALUES.has(stage);
+// Stage and close-reason data lives in the jobs feature. Re-exported so board imports keep working.
+export {
+  ALL_STAGES, CLOSED_STAGES, CLOSE_REASONS, OPEN_STAGES, REASON_STAGES, STAGE_LABELS, isClosedStage,
+} from "@/features/jobs";
 
 export const WORK_MODES = [
   { value: "onsite", label: "Onsite" },
@@ -33,19 +13,6 @@ export const PRIORITIES = [
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
-];
-
-// Moving into one of these asks why the job closed. Accepted doesn't.
-export const REASON_STAGES = ["rejected", "withdrawn", "ghosted"];
-
-// Values must match applications.closed_reason.
-export const CLOSE_REASONS = [
-  { value: "not_enough_experience", label: "Not enough experience" },
-  { value: "position_closed", label: "Position closed" },
-  { value: "salary_mismatch", label: "Salary mismatch" },
-  { value: "took_another_offer", label: "Took another offer" },
-  { value: "no_response", label: "No response" },
-  { value: "other", label: "Other" },
 ];
 
 export const MODE_LABELS = Object.fromEntries(WORK_MODES.map((m) => [m.value, m.label]));

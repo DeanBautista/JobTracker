@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { RouterProvider } from "react-router-dom";
 import AuthProvider from "@/features/auth/context/AuthProvider";
 import { useAuth } from "@/features/auth/context/useAuth";
+import ToastProvider from "@/context/ToastProvider";
 import router from "./router";
 
 const SPLASH_MIN_MS = 900; // never flash the splash for just a moment
@@ -63,7 +64,9 @@ export default function App() {
   return (
     <AuthProvider>
       <SplashGate />
-      <RouterProvider router={router} />
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
     </AuthProvider>
   );
 }

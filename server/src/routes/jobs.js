@@ -1,11 +1,32 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
-const { createJob, listJobs, moveJob } = require('../controllers/jobController');
+const c = require('../controllers/jobController');
 
 const router = express.Router();
 
-router.get('/', requireAuth, listJobs);
-router.post('/', requireAuth, createJob);
-router.patch('/:id/move', requireAuth, moveJob);
+router.get('/', requireAuth, c.listJobs);
+router.post('/', requireAuth, c.createJob);
+
+// Bulk (before /:id routes)
+router.post('/bulk/move', requireAuth, c.moveJobs);
+router.post('/bulk/archive', requireAuth, c.archiveJobs);
+router.post('/bulk/unarchive', requireAuth, c.unarchiveJobs);
+router.post('/bulk/delete', requireAuth, c.trashJobs);
+router.post('/bulk/restore', requireAuth, c.restoreJobs);
+router.post('/bulk/delete-forever', requireAuth, c.deleteJobsForever);
+
+router.post('/bulk/export', requireAuth, c.exportJobs);
+router.get('/export', requireAuth, c.exportFilteredJobs);
+
+// Must come before DELETE /:id
+router.delete('/trash', requireAuth, c.emptyTrash);
+
+// Single
+router.patch('/:id/move', requireAuth, c.moveJob);
+router.patch('/:id/archive', requireAuth, c.archiveJob);
+router.patch('/:id/unarchive', requireAuth, c.unarchiveJob);
+router.patch('/:id/restore', requireAuth, c.restoreJob);
+router.delete('/:id', requireAuth, c.trashJob);
+router.delete('/:id/permanent', requireAuth, c.deleteJobForever);
 
 module.exports = router;
