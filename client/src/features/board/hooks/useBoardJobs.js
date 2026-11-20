@@ -1,6 +1,11 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import useToast from "@/hooks/useToast";
 import { fetchBoardJobs, moveJobStage } from "../api/boardApi";
+import { STAGE_LABELS } from "../utils/boardStages";
 import AddJobContext from "@/features/jobs/context/AddJobContext"; // same file useJobs imports
+import {
+  archiveJobs, notifyJobsChanged, restoreJobs, trashJobs, unarchiveJobs, useJobsVersion,
+} from "@/features/jobs";
 
 const GAP = 1000;
 const byPosition = (a, b) => a.position - b.position;
@@ -16,11 +21,13 @@ const byPosition = (a, b) => a.position - b.position;
  */
 export default function useBoardJobs({ preview } = {}) {
   const jobsVersion = useContext(AddJobContext)?.jobsVersion ?? 0;
+  const syncVersion = useJobsVersion();
+  const toast = useToast();
+  const toastId = useRef(null); // the Undo toast of the latest move
+  const moveJobRef = useRef(null); // lets the Undo button call moveJob without a self-reference
   const loadedRef = useRef(false); // true after the first successful load
   const [status, setStatus] = useState("loading"); // loading | success | error
   const [jobs, setJobs] = useState([]);
-  const [lastMove, setLastMove] = useState(null); // drives the Undo toast
-  const [moveError, setMoveError] = useState(null);
   const [attempt, setAttempt] = useState(0);
 
   // Source of truth between renders, so two quick moves never read stale state.
@@ -52,7 +59,7 @@ export default function useBoardJobs({ preview } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [preview, attempt, jobsVersion, commit]);
+  }, [preview, attempt, jobsVersion, syncVersion, commit]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
@@ -109,48 +116,80 @@ export default function useBoardJobs({ preview } = {}) {
         // Re-ordering inside a column is not a stage change, so the age keeps counting.
         stageEnteredAt: restore ? restore.stageEnteredAt : sameStage ? job.stageEnteredAt : new Date().toISOString(),
       });
-      setMoveError(null);
-      setLastMove(
+
+      // A new move replaces the previous Undo, which would be stale now.
+      if (toastId.current != null) toast.dismiss(toastId.current);
+      toastId.current =
         silent || sameStage
           ? null
-          : { key: Date.now(), id, title: job.title, from: previous.stage, to: stage, previous },
-      );
+          : toast.show(`Moved ${job.title} to ${STAGE_LABELS[stage]}.`, {
+              action: {
+                label: "Undo",
+                onClick: () => moveJobRef.current(id, previous.stage, { silent: true, restore: previous }),
+              },
+            });
 
-      moveJobStage(id, { stage, position, closedReason: closing?.reason, closingNote: closing?.note }).catch(() => {
-        // Only roll back if the card is still where we put it.
-        const now = jobsRef.current.find((j) => j.id === id);
-        if (!now || now.stage !== stage || now.position !== position) return;
-        patchJob(id, previous);
-        setLastMove(null);
-        setMoveError(`Couldn't move ${job.title}. It was put back.`);
-      });
+      moveJobStage(id, { stage, position, closedReason: closing?.reason, closingNote: closing?.note })
+        .then(() => {
+          if (restore) notifyJobsChanged(); // an Undo may have been clicked on another page
+        })
+        .catch(() => {
+          // Only roll back if the card is still where we put it.
+          const now = jobsRef.current.find((j) => j.id === id);
+          if (!now || now.stage !== stage || now.position !== position) return;
+          patchJob(id, previous);
+          toast.show(`Couldn't move ${job.title}. It was put back.`);
+        });
     },
-    [patchJob],
+    [patchJob, toast],
   );
 
-  const undoMove = useCallback(() => {
-    if (!lastMove) return;
-    moveJob(lastMove.id, lastMove.from, { silent: true, restore: lastMove.previous });
-    setLastMove(null);
-  }, [lastMove, moveJob]);
+  useEffect(() => {
+    moveJobRef.current = moveJob;
+  }, [moveJob]);
 
-  const clearNotice = useCallback(() => {
-    setLastMove(null);
-    setMoveError(null);
-  }, []);
-
-  // UI only for now: removes cards from local state. A refresh brings them back.
   const dropJobs = useCallback(
-    (ids) => {
+    async (ids, { request, undo, done: verb, undone }) => {
+      const removed = jobsRef.current.filter((j) => ids.includes(j.id));
+      const label = removed.length === 1 ? removed[0].title : `${removed.length} jobs`;
       commit(jobsRef.current.filter((j) => !ids.includes(j.id)));
-      setLastMove(null);
-      setMoveError(null);
+      if (toastId.current != null) toast.dismiss(toastId.current);
+      toastId.current = null;
+
+      try {
+        const { ids: changed } = await request(ids);
+        notifyJobsChanged(); // any mounted page (list or board) refetches
+        if (changed.length === 0) {
+          toast.show("Nothing changed. These jobs may have been updated elsewhere.");
+          return;
+        }
+        toastId.current = toast.show(`${verb} ${label}.`, {
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              try {
+                await undo(changed);
+                notifyJobsChanged(); // not retry(): the board may not be mounted anymore
+                toast.show(`${undone} ${label}.`);
+              } catch {
+                toast.show("Couldn't undo. Try again.");
+              }
+            },
+          },
+        });
+      } catch {
+        commit([...jobsRef.current, ...removed]);
+        toast.show("Couldn't complete that. The cards were put back.");
+      }
     },
-    [commit],
+    [commit, toast],
   );
 
-  const archive = dropJobs;
-  const remove = dropJobs;
+  const archive = (ids) =>
+    dropJobs(ids, { request: archiveJobs, undo: unarchiveJobs, done: "Archived", undone: "Unarchived" });
 
-  return { status, jobs, retry, moveJob, undoMove, lastMove, moveError, clearNotice, archive, remove };
+  const remove = (ids) =>
+    dropJobs(ids, { request: trashJobs, undo: restoreJobs, done: "Moved to Trash:", undone: "Restored" });
+
+  return { status, jobs, retry, moveJob, archive, remove };
 }

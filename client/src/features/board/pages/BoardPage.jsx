@@ -7,7 +7,6 @@ import BoardFilters from "../components/board/BoardFilters";
 import BoardHeader from "../components/board/BoardHeader";
 import BoardSkeleton from "../components/board/BoardSkeleton";
 import BoardState from "../components/board/BoardState";
-import BoardToast from "../components/board/BoardToast";
 import StageJumpNav from "../components/board/StageJumpNav";
 import useBoardFilters from "../hooks/useBoardFilters";
 import useBoardJobs from "../hooks/useBoardJobs";
@@ -17,7 +16,7 @@ import { CLOSED_STAGES, REASON_STAGES, isClosedStage } from "../utils/boardStage
 export default function BoardPage() {
   const { openAddJob } = useAddJob();
   const { filters, activeFilters, preview, applyFilters, clearFilters, removeFilter } = useBoardFilters();
-  const { status, jobs, retry, moveJob, undoMove, lastMove, moveError, clearNotice, archive, remove } = useBoardJobs({ preview });
+  const { status, jobs, retry, moveJob, archive, remove } = useBoardJobs({ preview });
 
   // Everything below is derived from state, so counts stay right after a drop.
   const visibleJobs = useMemo(() => filterJobs(jobs, filters), [jobs, filters]);
@@ -77,8 +76,6 @@ export default function BoardPage() {
           onDelete={remove}
         />
       )}
-
-      <BoardToast move={lastMove} error={moveError} onUndo={undoMove} onDismiss={clearNotice} />
 
       {pendingClose && (
         <CloseReasonDialog

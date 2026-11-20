@@ -1,13 +1,15 @@
 import { useId, useState } from "react";
 import Modal from "@/components/Modal";
 import { FIELD_CLASS, TEXTAREA_CLASS } from "@/features/jobs/utils/jobFormOptions";
-import { CLOSE_REASONS, STAGE_LABELS } from "../../../board/utils/boardStages";
+import { CLOSE_REASONS, STAGE_LABELS } from "../../utils/jobOptions";
 
-export default function CloseReasonDialog({ job, stage, onConfirm, onCancel }) {
+export default function CloseReasonDialog({ job, count = 1, stage, onConfirm, onCancel }) {
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
   const reasonId = useId();
   const noteId = useId();
+
+  const subject = count > 1 ? `${count} jobs` : job ? `${job.title} at ${job.company}` : "This job";
 
   const submit = (e) => {
     e.preventDefault();
