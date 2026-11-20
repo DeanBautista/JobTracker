@@ -9,7 +9,8 @@
     "migrate": "knex migrate:latest",
     "migrate:rollback": "knex migrate:rollback",
     "migrate:make": "knex migrate:make",
-    "seed:demo": "node src/scripts/seedDemo.js"
+    "seed:demo": "node src/scripts/seedDemo.js",
+    "purge:trash": "node src/scripts/purgeTrash.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

@@ -47,7 +47,8 @@ function filtered(userId, f) {
     .where('a.user_id', userId)
     .whereNull('a.deleted_at');
 
-  if (!f.archived) query.whereNull('a.archived_at');
+  if (f.archived) query.whereNotNull('a.archived_at');
+  else query.whereNull('a.archived_at');
 
   if (f.q) {
     const like = `%${f.q.replace(/[\\%_]/g, '\\$&')}%`; // escape LIKE wildcards
@@ -112,6 +113,7 @@ async function findById(userId, id) {
     .join('companies as c', 'c.id', 'a.company_id')
     .select(JOB_COLUMNS)
     .where({ 'a.id': id, 'a.user_id': userId })
+    .whereNull('a.deleted_at')
     .limit(1);
   return (await withReminders(userId, rows))[0];
 }
@@ -260,4 +262,143 @@ async function listBoard(userId) {
   return rows.map((row) => ({ ...row, interviewAt: at.get(row.id) ?? null }));
 }
 
-module.exports = { list, listBoard, findById, findDuplicate, create, move, STAGES, CLOSE_REASONS };
+// Locks the caller's matching rows, applies the change, returns the ids that changed.
+// Ids that aren't theirs, or are already in the target state, are skipped.
+async function changeMany(userId, ids, scope, change) {
+  return knex.transaction(async (trx) => {
+    const rows = await scope(trx('applications').where('user_id', userId).whereIn('id', ids))
+      .forUpdate()
+      .select('id');
+    const found = rows.map((r) => r.id);
+    if (found.length > 0) await change(trx('applications').whereIn('id', found));
+    return found;
+  });
+}
+
+const archive = (userId, ids) =>
+  changeMany(
+    userId,
+    ids,
+    (q) => q.whereNull('deleted_at').whereNull('archived_at'),
+    (q) => q.update({ archived_at: knex.fn.now() }),
+  );
+
+const unarchive = (userId, ids) =>
+  changeMany(
+    userId,
+    ids,
+    (q) => q.whereNull('deleted_at').whereNotNull('archived_at'),
+    (q) => q.update({ archived_at: null }),
+  );
+
+// Move to Trash.
+const trash = (userId, ids) =>
+  changeMany(
+    userId,
+    ids,
+    (q) => q.whereNull('deleted_at'),
+    (q) => q.update({ deleted_at: knex.fn.now() }),
+  );
+
+const restore = (userId, ids) =>
+  changeMany(
+    userId,
+    ids,
+    (q) => q.whereNotNull('deleted_at'),
+    (q) => q.update({ deleted_at: null }),
+  );
+
+// Only jobs already in Trash can be deleted forever. Notes, history, interviews, reminders cascade.
+const deleteForever = (userId, ids) =>
+  changeMany(
+    userId,
+    ids,
+    (q) => q.whereNotNull('deleted_at'),
+    (q) => q.del(),
+  );
+
+// Returns the number of jobs removed.
+const emptyTrash = (userId) =>
+  knex('applications').where('user_id', userId).whereNotNull('deleted_at').del();
+
+// Run by scripts/purgeTrash.js. All users, older than 30 days.
+const purgeExpiredTrash = () =>
+  knex('applications').whereNotNull('deleted_at').whereRaw('deleted_at < NOW() - INTERVAL 30 DAY').del();
+
+async function listTrash(userId) {
+  const rows = await knex('applications as a')
+    .join('companies as c', 'c.id', 'a.company_id')
+    .select(
+      'a.id',
+      'a.title',
+      'c.name as company',
+      'a.status as stage',
+      knex.raw("DATE_FORMAT(a.deleted_at, '%Y-%m-%dT%H:%i:%sZ') AS deletedAt"),
+      knex.raw('GREATEST(0, 30 - TIMESTAMPDIFF(DAY, a.deleted_at, NOW())) AS daysLeft'),
+    )
+    .where('a.user_id', userId)
+    .whereNotNull('a.deleted_at')
+    .orderBy('a.deleted_at', 'desc');
+  return rows.map((r) => ({ ...r, daysLeft: Number(r.daysLeft) }));
+}
+
+// Bulk "Move to": every selected job goes to the TOP of the target column, in selection order.
+// Jobs already in the target stage are skipped. Returns the ids that moved.
+async function moveMany(userId, ids, { stage, closedReason = null, closingNote = null }) {
+  return knex.transaction(async (trx) => {
+    const rows = await trx('applications')
+      .where('user_id', userId)
+      .whereIn('id', ids)
+      .whereNull('deleted_at')
+      .whereNot('status', stage)
+      .forUpdate()
+      .select('id', 'status');
+    if (rows.length === 0) return [];
+
+    const order = new Map(ids.map((id, i) => [id, i]));
+    rows.sort((a, b) => order.get(a.id) - order.get(b.id));
+
+    const { minPos } = await trx('applications')
+      .where({ user_id: userId, status: stage })
+      .whereNull('deleted_at')
+      .whereNull('archived_at')
+      .min({ minPos: 'board_position' })
+      .first();
+    const start = minPos == null ? 0 : minPos - rows.length;
+    const nowClosed = CLOSED_STATUSES.includes(stage);
+
+    for (const [i, job] of rows.entries()) {
+      const wasClosed = CLOSED_STATUSES.includes(job.status);
+      const patch = {
+        status: stage,
+        board_position: start + i,
+        stage_changed_at: knex.fn.now(),
+        last_activity_at: knex.fn.now(),
+      };
+
+      if (nowClosed) {
+        patch.closed_reason = closedReason;
+        patch.closing_note = closingNote;
+        if (!wasClosed) {
+          patch.closed_stage = job.status;
+          patch.closed_at = knex.fn.now();
+        }
+      } else {
+        Object.assign(patch, { closed_stage: null, closed_at: null, closed_reason: null, closing_note: null });
+      }
+
+      await trx('applications').where('id', job.id).update(patch);
+    }
+
+    await trx('status_history').insert(
+      rows.map((j) => ({ application_id: j.id, from_status: j.status, to_status: stage })),
+    );
+    return rows.map((j) => j.id);
+  });
+}
+
+module.exports = {
+  list, listBoard, listTrash, findById, findDuplicate, create, move, moveMany,
+  archive, unarchive, trash, restore, deleteForever, emptyTrash, purgeExpiredTrash,
+  STAGES, CLOSE_REASONS,
+};

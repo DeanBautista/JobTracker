@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ActiveFilters from "../components/list/ActiveFilters";
 import BulkBar from "../components/list/BulkBar";
 import JobFilters from "../components/list/JobFilters";
@@ -10,6 +10,8 @@ import ListState from "../components/list/ListState";
 import useJobFilters from "../hooks/useJobFilters";
 import useJobSelection from "../hooks/useJobSelection";
 import useJobs from "../hooks/useJobs";
+import CloseReasonDialog from "../components/shared/CloseReasonDialog";
+import useJobActions from "../hooks/useJobActions";
 import { DEFAULT_VISIBLE_COLUMNS } from "../utils/jobOptions";
 
 // Placeholders until the API exists. Every action takes an array of job ids.
@@ -26,15 +28,29 @@ export default function JobsListPage() {
     applyFilters, removeFilter, clearFilters, toggleSort, setPage, setSize,
   } = useJobFilters();
 
-  const { status, jobs, total, retry } = useJobs({ filters, sort, dir, page, size });
+  const { status, jobs, total, retry, reload } = useJobs({ filters, sort, dir, page, size });
   const selection = useJobSelection(jobs);
   const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS);
+
+  const { actions: jobActions, pendingMove, confirmMove, cancelMove } = useJobActions({
+    jobs,
+    reload,
+    clearSelection: selection.clear,
+  });
+  const actions = { ...jobActions, exportSelection: (ids) => console.info("export", ids) };
 
   const hasFilters = activeFilters.length > 0;
   const showFilters = status === "success" && (total > 0 || hasFilters);
   const showList = status === "success" && total > 0;
 
   const toggleColumn = (key) => setVisibleColumns((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  // If the last row of the last page was removed, step back to the new last page.
+  useEffect(() => {
+    if (status === "success" && jobs.length === 0 && total > 0 && page > 1) {
+      setPage(Math.ceil(total / size));
+    }
+  }, [status, jobs.length, total, page, size, setPage]);
 
   return (
     <>
@@ -90,6 +106,16 @@ export default function JobsListPage() {
             onSizeChange={setSize}
           />
         </>
+      )}
+
+      {pendingMove && (
+        <CloseReasonDialog
+          job={jobs.find((j) => j.id === pendingMove.ids[0])}
+          count={pendingMove.ids.length}
+          stage={pendingMove.stage}
+          onConfirm={confirmMove}
+          onCancel={cancelMove}
+        />
       )}
     </>
   );
