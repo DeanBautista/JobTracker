@@ -41,6 +41,21 @@ const SORT_COLUMNS = {
   days: 'a.stage_changed_at',
 };
 
+const EXPORT_COLUMNS = [
+  'a.id', 'a.title', 'c.name as company', 'a.status', 'a.priority', 'a.work_mode', 'a.employment_type',
+  'a.location', 'a.source', 'a.referred_by', 'a.job_url',
+  'a.salary_min', 'a.salary_max', 'a.salary_currency', 'a.salary_period',
+  knex.raw("DATE_FORMAT(a.date_posted, '%Y-%m-%d') AS date_posted"),
+  knex.raw("DATE_FORMAT(a.date_applied, '%Y-%m-%d') AS date_applied"),
+  knex.raw("DATE_FORMAT(a.deadline, '%Y-%m-%d') AS deadline"),
+  'a.closed_reason', 'a.closing_note',
+  knex.raw('TIMESTAMPDIFF(DAY, a.stage_changed_at, NOW()) AS days_in_stage'),
+  knex.raw('a.archived_at IS NOT NULL AS archived'),
+  knex.raw("DATE_FORMAT(a.created_at, '%Y-%m-%d') AS added"),
+];
+
+const MAX_EXPORT = 5000;
+
 function filtered(userId, f) {
   const query = knex('applications as a')
     .join('companies as c', 'c.id', 'a.company_id')
@@ -397,8 +412,18 @@ async function moveMany(userId, ids, { stage, closedReason = null, closingNote =
   });
 }
 
+// Everything matching the list's filters and sort, with no paging.
+function listFilteredForExport(userId, f) {
+  const direction = f.sort === 'days' ? (f.dir === 'asc' ? 'desc' : 'asc') : f.dir;
+  return filtered(userId, f)
+    .select(EXPORT_COLUMNS)
+    .orderBy(SORT_COLUMNS[f.sort], direction)
+    .orderBy('a.id', 'desc')
+    .limit(MAX_EXPORT);
+}
+
 module.exports = {
   list, listBoard, listTrash, findById, findDuplicate, create, move, moveMany,
-  archive, unarchive, trash, restore, deleteForever, emptyTrash, purgeExpiredTrash,
+  archive, unarchive, trash, restore, deleteForever, emptyTrash, purgeExpiredTrash, listFilteredForExport,
   STAGES, CLOSE_REASONS,
 };

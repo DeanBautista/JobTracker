@@ -544,3 +544,89 @@ describe('POST /jobs/bulk/move', () => {
     expect(jobModel.moveMany).not.toHaveBeenCalled();
   });
 });
+
+const exportRow = {
+  id: 1, title: 'Frontend Developer', company: 'Northwind', status: 'applied', priority: 'high',
+  work_mode: 'remote', employment_type: 'full_time', salary_min: '50000.00', salary_max: null,
+  days_in_stage: '3', archived: 0,
+};
+
+const bodyWithoutBom = (res) => res.text.replace(/^\uFEFF/, '');
+
+describe('POST /jobs/bulk/export', () => {
+  test('returns 401 without a token', async () => {
+    const res = await request(app).post('/jobs/bulk/export').send({ ids: [1] });
+
+    expect(res.statusCode).toBe(401);
+    expect(jobModel.listForExport).not.toHaveBeenCalled();
+  });
+
+  test('returns 422 for invalid ids', async () => {
+    const res = await request(app).post('/jobs/bulk/export').set(auth()).send({ ids: [] });
+
+    expect(res.statusCode).toBe(422);
+    expect(jobModel.listForExport).not.toHaveBeenCalled();
+  });
+
+  test('returns 404 when none of the jobs are found', async () => {
+    jobModel.listForExport.mockResolvedValue([]);
+
+    const res = await request(app).post('/jobs/bulk/export').set(auth()).send({ ids: [1] });
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  test('returns a CSV download with readable labels', async () => {
+    jobModel.listForExport.mockResolvedValue([exportRow]);
+
+    const res = await request(app).post('/jobs/bulk/export').set(auth()).send({ ids: [1, 2] });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/csv/);
+    expect(res.headers['content-disposition']).toMatch(/attachment; filename="jobs-\d{4}-\d{2}-\d{2}\.csv"/);
+    const [header, line] = bodyWithoutBom(res).split('\r\n');
+    expect(header.startsWith('Title,Company,Stage,Priority')).toBe(true);
+    expect(line.startsWith('Frontend Developer,Northwind,Applied,High,Remote,Full time')).toBe(true);
+    expect(jobModel.listForExport).toHaveBeenCalledWith(147, [1, 2]);
+  });
+
+  test('escapes commas, quotes and formula-looking values', async () => {
+    jobModel.listForExport.mockResolvedValue([
+      { ...exportRow, title: 'Dev, "Senior"', company: '=HYPERLINK("x")' },
+    ]);
+
+    const res = await request(app).post('/jobs/bulk/export').set(auth()).send({ ids: [1] });
+
+    expect(bodyWithoutBom(res)).toContain(`"Dev, ""Senior""","'=HYPERLINK(""x"")"`);
+  });
+});
+
+describe('GET /jobs/export', () => {
+  test('returns 401 without a token', async () => {
+    const res = await request(app).get('/jobs/export');
+
+    expect(res.statusCode).toBe(401);
+    expect(jobModel.listFilteredForExport).not.toHaveBeenCalled();
+  });
+
+  test('exports everything matching the filters and sort', async () => {
+    jobModel.listFilteredForExport.mockResolvedValue([exportRow]);
+
+    const res = await request(app).get('/jobs/export?q=react&stage=closed&sort=days&dir=asc').set(auth());
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/csv/);
+    expect(jobModel.listFilteredForExport).toHaveBeenCalledWith(
+      147,
+      expect.objectContaining({ q: 'react', stage: 'closed', sort: 'days', dir: 'asc' }),
+    );
+  });
+
+  test('returns 404 when nothing matches', async () => {
+    jobModel.listFilteredForExport.mockResolvedValue([]);
+
+    const res = await request(app).get('/jobs/export').set(auth());
+
+    expect(res.statusCode).toBe(404);
+  });
+});

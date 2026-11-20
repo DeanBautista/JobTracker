@@ -14,14 +14,6 @@ import CloseReasonDialog from "../components/shared/CloseReasonDialog";
 import useJobActions from "../hooks/useJobActions";
 import { DEFAULT_VISIBLE_COLUMNS } from "../utils/jobOptions";
 
-// Placeholders until the API exists. Every action takes an array of job ids.
-const actions = {
-  moveStage: (ids, stage) => console.info("move", ids, stage),
-  archive: (ids) => console.info("archive", ids),
-  remove: (ids) => console.info("delete", ids),
-  exportSelection: (ids) => console.info("export", ids),
-};
-
 export default function JobsListPage() {
   const {
     filters, activeFilters, sort, dir, page, size,
@@ -32,12 +24,11 @@ export default function JobsListPage() {
   const selection = useJobSelection(jobs);
   const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS);
 
-  const { actions: jobActions, pendingMove, confirmMove, cancelMove } = useJobActions({
+  const { actions, pendingMove, confirmMove, cancelMove } = useJobActions({
     jobs,
     reload,
     clearSelection: selection.clear,
   });
-  const actions = { ...jobActions, exportSelection: (ids) => console.info("export", ids) };
 
   const hasFilters = activeFilters.length > 0;
   const showFilters = status === "success" && (total > 0 || hasFilters);
@@ -65,6 +56,8 @@ export default function JobsListPage() {
             onClear={clearFilters}
             visibleColumns={visibleColumns}
             onToggleColumn={toggleColumn}
+            onExport={() => actions.exportFiltered({ ...filters, sort, dir }, total)}
+            exportDisabled={total === 0}
           />
         </>
       )}

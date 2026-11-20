@@ -3,6 +3,8 @@ import useToast from "@/hooks/useToast";
 import { getApiError } from "@/lib/api";
 import * as api from "../api/jobActions";
 import { REASON_STAGES, STAGE_LABELS } from "../utils/jobOptions";
+import downloadFile from "@/lib/downloadFile";
+import exportJobs, { exportFilteredJobs } from "../api/exportJobs";
 
 const plural = (n) => `${n} job${n === 1 ? "" : "s"}`;
 
@@ -75,8 +77,25 @@ export default function useJobActions({ jobs, reload, clearSelection }) {
     sendMove(ids, stage, details);
   };
 
+  const saveCsv = async (getBlob, count) => {
+    if (busy.current) return;
+    busy.current = true;
+    try {
+      downloadFile(await getBlob(), `jobs-${new Date().toLocaleDateString("en-CA")}.csv`); // en-CA = YYYY-MM-DD
+      toast.show(`Exported ${plural(count)} to CSV.`);
+    } catch {
+      toast.show("Couldn't export. Try again.");
+    } finally {
+      busy.current = false;
+    }
+  };
+
+  const exportSelection = (ids) => saveCsv(() => exportJobs(ids), ids.length);
+  const exportFiltered = (params, count) => saveCsv(() => exportFilteredJobs(params), count);
+  
+
   return {
-    actions: { moveStage, archive, remove },
+    actions: { moveStage, archive, remove, exportSelection, exportFiltered },
     pendingMove,
     confirmMove,
     cancelMove: () => setPendingMove(null),

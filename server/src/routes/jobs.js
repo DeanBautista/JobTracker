@@ -15,6 +15,9 @@ router.post('/bulk/delete', requireAuth, c.trashJobs);
 router.post('/bulk/restore', requireAuth, c.restoreJobs);
 router.post('/bulk/delete-forever', requireAuth, c.deleteJobsForever);
 
+router.post('/bulk/export', requireAuth, c.exportJobs);
+router.get('/export', requireAuth, c.exportFilteredJobs);
+
 // Must come before DELETE /:id
 router.delete('/trash', requireAuth, c.emptyTrash);
 

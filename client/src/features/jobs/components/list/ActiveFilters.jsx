@@ -1,7 +1,7 @@
 import ColumnsMenu from "./ColumnsMenu";
 
 export default function ActiveFilters({
-  activeFilters, onRemove, onClear, visibleColumns, onToggleColumn,
+  activeFilters, onRemove, onClear, visibleColumns, onToggleColumn, onExport, exportDisabled
 }) {
   return (
     <div
@@ -36,7 +36,14 @@ export default function ActiveFilters({
 
       <span className="flex w-full items-center justify-between gap-2.5 tbl:ml-auto tbl:w-auto tbl:justify-start">
         <ColumnsMenu visible={visibleColumns} onToggle={onToggleColumn} />
-        <a href="/jobs.csv" className="btn btn-sm">Export CSV</a>
+        <button
+          type="button"
+          onClick={onExport}
+          disabled={exportDisabled}
+          className="btn btn-sm disabled:cursor-default disabled:opacity-50"
+        >
+          Export CSV
+        </button>
       </span>
     </div>
   );

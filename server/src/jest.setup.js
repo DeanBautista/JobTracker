@@ -70,6 +70,8 @@ jest.mock('./models/jobModel', () => ({
   deleteForever: jest.fn(),
   emptyTrash: jest.fn(),
   purgeExpiredTrash: jest.fn(),
+  listForExport: jest.fn(),
+  listFilteredForExport: jest.fn(),
   // Plain arrays (not jest.fn), so resetAllMocks leaves them alone.
   STAGES: ['wishlist', 'applied', 'screening', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn', 'ghosted'],
   CLOSE_REASONS: ['not_enough_experience', 'position_closed', 'salary_mismatch', 'took_another_offer', 'no_response', 'other'],

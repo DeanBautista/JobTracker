@@ -1,5 +1,6 @@
 const jobModel = require('../models/jobModel');
 const { validateCreateJob, parseListQuery, parseIds, MAX_BULK } = require('../validators/jobValidator');
+const { jobsToCsv } = require('../utils/jobsCsv');
 
 // GET /jobs?view=trash -> { jobs }
 const listJobs = async (req, res) => {
@@ -91,6 +92,32 @@ const emptyTrash = async (req, res) => {
   res.json({ affected: await jobModel.emptyTrash(req.userId) });
 };
 
+const sendCsv = (res, rows) => {
+  res.set({
+    'Content-Type': 'text/csv; charset=utf-8',
+    'Content-Disposition': `attachment; filename="jobs-${new Date().toISOString().slice(0, 10)}.csv"`,
+    'Cache-Control': 'no-store',
+  });
+  res.send(jobsToCsv(rows));
+};
+
+// POST /jobs/bulk/export  { ids }  ->  CSV of the selected rows
+const exportJobs = async (req, res) => {
+  const ids = parseIds(req.body?.ids);
+  if (!ids) return res.status(422).json({ errors: { ids: `Send 1 to ${MAX_BULK} job ids` } });
+
+  const rows = await jobModel.listForExport(req.userId, ids);
+  if (rows.length === 0) return res.status(404).json({ error: 'No jobs found' });
+  sendCsv(res, rows);
+};
+
+// GET /jobs/export?<same filters and sort as the list>  ->  CSV of every match
+const exportFilteredJobs = async (req, res) => {
+  const rows = await jobModel.listFilteredForExport(req.userId, parseListQuery(req.query));
+  if (rows.length === 0) return res.status(404).json({ error: 'No jobs found' });
+  sendCsv(res, rows);
+};
+
 module.exports = {
   createJob,
   listJobs,
@@ -107,4 +134,6 @@ module.exports = {
   trashJobs: bulk('trash'),
   restoreJobs: bulk('restore'),
   deleteJobsForever: bulk('deleteForever'),
+  exportJobs,
+  exportFilteredJobs
 };
