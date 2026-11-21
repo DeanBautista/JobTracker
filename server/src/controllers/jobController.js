@@ -1,4 +1,5 @@
 const jobModel = require('../models/jobModel');
+const AppError = require('../utils/AppError');
 const { validateCreateJob, parseListQuery, parseIds, MAX_BULK } = require('../validators/jobValidator');
 const { jobsToCsv } = require('../utils/jobsCsv');
 
@@ -12,6 +13,15 @@ const parsePaging = (query) => {
     size: PAGE_SIZES.includes(size) ? size : 10,
   };
 };
+
+const invalidIds = () =>
+  AppError.validation('invalid_ids', `Send 1 to ${MAX_BULK} job ids`, {
+    ids: `Send 1 to ${MAX_BULK} job ids`,
+  });
+
+const invalidMove = () => AppError.validation('invalid_move', 'Invalid move', { move: 'Invalid move' });
+
+const jobNotFound = () => AppError.notFound('job_not_found', 'Job not found');
 
 // GET /jobs?view=archive|trash&page&size -> { jobs, total, counts: { archive, trash } }
 const listJobs = async (req, res) => {
@@ -30,17 +40,17 @@ const listJobs = async (req, res) => {
 const single = (action) => async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) {
-    return res.status(422).json({ errors: { id: 'Invalid job id' } });
+    throw AppError.validation('invalid_id', 'Invalid job id', { id: 'Invalid job id' });
   }
   const done = await jobModel[action](req.userId, [id]);
-  if (done.length === 0) return res.status(404).json({ error: 'Job not found' });
+  if (done.length === 0) throw jobNotFound();
   res.json({ id });
 };
 
 // Many jobs: POST /jobs/bulk/<action>  { ids }  ->  { affected, ids }
 const bulk = (action) => async (req, res) => {
   const ids = parseIds(req.body?.ids);
-  if (!ids) return res.status(422).json({ errors: { ids: `Send 1 to ${MAX_BULK} job ids` } });
+  if (!ids) throw invalidIds();
   const done = await jobModel[action](req.userId, ids);
   res.json({ affected: done.length, ids: done });
 };
@@ -48,11 +58,15 @@ const bulk = (action) => async (req, res) => {
 // POST /jobs
 const createJob = async (req, res) => {
   const { errors, values } = validateCreateJob(req.body || {});
-  if (Object.keys(errors).length > 0) return res.status(422).json({ errors });
+  if (Object.keys(errors).length > 0) {
+    throw AppError.validation('validation_failed', 'Some fields are invalid', errors);
+  }
 
   if (values.link && !req.body.confirmDuplicate) {
     const duplicate = await jobModel.findDuplicate(req.userId, values.link);
-    if (duplicate) return res.status(409).json({ duplicate });
+    if (duplicate) {
+      throw AppError.conflict('duplicate_job', 'You already saved a job with this link', { duplicate });
+    }
   }
 
   const job = await jobModel.create(req.userId, values);
@@ -75,11 +89,11 @@ const moveJob = async (req, res) => {
     badReason ||
     badNote
   ) {
-    return res.status(422).json({ errors: { move: 'Invalid move' } });
+    throw invalidMove();
   }
 
   const result = await jobModel.move(req.userId, id, { stage, position, closedReason, closingNote });
-  if (!result) return res.status(404).json({ error: 'Job not found' });
+  if (!result) throw jobNotFound();
   res.json(result);
 };
 
@@ -92,7 +106,7 @@ const moveJobs = async (req, res) => {
   const badNote = closingNote != null && (typeof closingNote !== 'string' || closingNote.length > 1000);
 
   if (!ids || !jobModel.STAGES.includes(stage) || badReason || badNote) {
-    return res.status(422).json({ errors: { move: 'Invalid move' } });
+    throw invalidMove();
   }
 
   const moved = await jobModel.moveMany(req.userId, ids, { stage, closedReason, closingNote });
@@ -116,17 +130,17 @@ const sendCsv = (res, rows) => {
 // POST /jobs/bulk/export  { ids }  ->  CSV of the selected rows
 const exportJobs = async (req, res) => {
   const ids = parseIds(req.body?.ids);
-  if (!ids) return res.status(422).json({ errors: { ids: `Send 1 to ${MAX_BULK} job ids` } });
+  if (!ids) throw invalidIds();
 
   const rows = await jobModel.listForExport(req.userId, ids);
-  if (rows.length === 0) return res.status(404).json({ error: 'No jobs found' });
+  if (rows.length === 0) throw AppError.notFound('no_jobs_found', 'No jobs found');
   sendCsv(res, rows);
 };
 
 // GET /jobs/export?<same filters and sort as the list>  ->  CSV of every match
 const exportFilteredJobs = async (req, res) => {
   const rows = await jobModel.listFilteredForExport(req.userId, parseListQuery(req.query));
-  if (rows.length === 0) return res.status(404).json({ error: 'No jobs found' });
+  if (rows.length === 0) throw AppError.notFound('no_jobs_found', 'No jobs found');
   sendCsv(res, rows);
 };
 
@@ -147,5 +161,5 @@ module.exports = {
   restoreJobs: bulk('restore'),
   deleteJobsForever: bulk('deleteForever'),
   exportJobs,
-  exportFilteredJobs
+  exportFilteredJobs,
 };
