@@ -1,9 +1,10 @@
 import { useState } from "react";
-import cx from "../../../../lib/cx";
-import Panel from "../../../../components/ui/Panel";
-import SectionHeader from "../../../../components/ui/SectionHeader";
-import StateCard from "../../../../components/ui/StateCard";
-import TextBadge from "../../../../components/ui/TextBadge";
+import cx from "@/lib/cx";
+import Panel from "@/components/ui/Panel";
+import SectionHeader from "@/components/ui/SectionHeader";
+import StateCard from "@/components/ui/StateCard";
+import TextBadge from "@/components/ui/TextBadge";
+import useJobTimeline from "../../hooks/useJobTimeline";
 import { formatDateTime } from "../../utils/formatters";
 
 const FILTERS = [
@@ -23,8 +24,9 @@ const BADGES = {
 };
 
 export default function TimelineTab({ job }) {
+  const { status, events: all, retry } = useJobTimeline(job.id);
   const [filter, setFilter] = useState("all");
-  const events = job.timeline.filter((e) => filter === "all" || e.type === filter);
+  const events = all.filter((e) => filter === "all" || e.type === filter);
 
   return (
     <div className="grid gap-[18px]">
@@ -32,78 +34,95 @@ export default function TimelineTab({ job }) {
         id="timeline-heading"
         title="Timeline"
         subtitle="A history of changes and activity on this job."
-        aside={<span className="label">{job.timeline.length === 1 ? "1 event" : `${job.timeline.length} events`}</span>}
+        aside={status === "success" ? <span className="label">{all.length === 1 ? "1 event" : `${all.length} events`}</span> : null}
       />
 
-      {job.timeline.length === 0 ? (
-        <StateCard icon="↺" title="No timeline events yet" message="Changes, notes, interviews, and file activity will appear here." />
-      ) : (
-        <>
-          <div role="group" aria-label="Filter timeline" className="flex flex-wrap gap-[7px]">
-            {FILTERS.map((f) => (
-              <button
-                key={f.key}
-                type="button"
-                aria-pressed={filter === f.key}
-                onClick={() => setFilter(f.key)}
-                className={cx(
-                  "inline-flex min-h-9 cursor-pointer items-center justify-center rounded-full border px-3 text-meta hover:border-ink hover:bg-tint",
-                  filter === f.key ? "border-ink bg-tint" : "border-rule bg-surface",
-                )}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+      {status === "loading" && <p className="text-sm text-muted">Loading timeline…</p>}
 
-          <Panel aria-label="Recent job activity" className="px-3.5 sm:px-[18px]">
-            {events.length === 0 ? (
-              <p className="py-6 text-center text-meta text-muted">No events of this type.</p>
-            ) : (
-              <ol>
-                {events.map((event) => {
-                  const badge = BADGES[event.type];
-                  return (
-                    <li
-                      key={event.id}
-                      className="grid grid-cols-[34px_minmax(0,1fr)] items-start gap-x-[13px] gap-y-1.5 border-b border-rule py-[17px] last:border-b-0 sm:grid-cols-[34px_minmax(0,1fr)_auto]"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="grid size-8 place-items-center rounded-full border border-rule bg-paper text-[15px]"
-                      >
-                        {event.icon ?? ICONS[event.type]}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-sm break-words">
-                          <strong className="font-semibold">{event.title}</strong>
-                          {event.detail && <> — {event.detail}</>}
-                          {event.link && (
-                            <>
-                              {" "}
-                              —{" "}
-                              <a className="link" href={event.link.href} target="_blank" rel="noopener noreferrer">
-                                {event.link.label}
-                              </a>
-                            </>
-                          )}
-                        </p>
-                        <time dateTime={event.at} className="mt-[5px] block text-xs text-muted">
-                          {formatDateTime(event.at)}
-                        </time>
-                      </div>
-                      <div className="col-start-2 justify-self-start sm:col-start-3 sm:mt-[3px]">
-                        <TextBadge tone={badge.tone}>{badge.label}</TextBadge>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
-          </Panel>
-          <p className="text-[12.5px] text-muted">Timeline is read-only. Events are recorded automatically.</p>
-        </>
+      {status === "error" && (
+        <StateCard
+          role="alert"
+          icon="!"
+          title="Could not load timeline"
+          message="The timeline could not be loaded. Try again."
+          action={
+            <button type="button" className="btn" onClick={retry}>
+              Try again
+            </button>
+          }
+        />
       )}
+
+      {status === "success" &&
+        (all.length === 0 ? (
+          <StateCard icon="↺" title="No timeline events yet" message="Changes, notes, interviews, and file activity will appear here." />
+        ) : (
+          <>
+            <div role="group" aria-label="Filter timeline" className="flex flex-wrap gap-[7px]">
+              {FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  aria-pressed={filter === f.key}
+                  onClick={() => setFilter(f.key)}
+                  className={cx(
+                    "inline-flex min-h-9 cursor-pointer items-center justify-center rounded-full border px-3 text-meta hover:border-ink hover:bg-tint",
+                    filter === f.key ? "border-ink bg-tint" : "border-rule bg-surface",
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            <Panel aria-label="Recent job activity" className="px-3.5 sm:px-[18px]">
+              {events.length === 0 ? (
+                <p className="py-6 text-center text-meta text-muted">No events of this type.</p>
+              ) : (
+                <ol>
+                  {events.map((event) => {
+                    const badge = BADGES[event.type];
+                    return (
+                      <li
+                        key={event.id}
+                        className="grid grid-cols-[34px_minmax(0,1fr)] items-start gap-x-[13px] gap-y-1.5 border-b border-rule py-[17px] last:border-b-0 sm:grid-cols-[34px_minmax(0,1fr)_auto]"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="grid size-8 place-items-center rounded-full border border-rule bg-paper text-[15px]"
+                        >
+                          {event.icon ?? ICONS[event.type]}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm break-words">
+                            <strong className="font-semibold">{event.title}</strong>
+                            {event.detail && <> — {event.detail}</>}
+                            {event.link && (
+                              <>
+                                {" "}
+                                —{" "}
+                                <a className="link" href={event.link.href} target="_blank" rel="noopener noreferrer">
+                                  {event.link.label}
+                                </a>
+                              </>
+                            )}
+                          </p>
+                          <time dateTime={event.at} className="mt-[5px] block text-xs text-muted">
+                            {formatDateTime(event.at)}
+                          </time>
+                        </div>
+                        <div className="col-start-2 justify-self-start sm:col-start-3 sm:mt-[3px]">
+                          <TextBadge tone={badge.tone}>{badge.label}</TextBadge>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </Panel>
+            <p className="text-[12.5px] text-muted">Timeline is read-only. Events are recorded automatically.</p>
+          </>
+        ))}
     </div>
   );
 }

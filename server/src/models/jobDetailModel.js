@@ -12,6 +12,23 @@ const NOTE_COLS = [
   'id', 'body as text', 'is_pinned as pinned', z('created_at', 'createdAt'),
   knex.raw('updated_at > created_at AS edited'),
 ];
+
+const STAGE_LABEL = {
+  wishlist: 'Wishlist', applied: 'Applied', screening: 'Screening', interview: 'Interview', offer: 'Offer',
+  accepted: 'Accepted', rejected: 'Rejected', withdrawn: 'Withdrawn', ghosted: 'Ghosted',
+};
+const ROUND_LABEL = {
+  phone_screen: 'Phone screen', technical: 'Technical interview', behavioral: 'Behavioral interview',
+  panel: 'Panel interview', take_home: 'Take-home', onsite: 'Onsite interview', final: 'Final interview',
+};
+const RESULT_LABEL = {
+  passed: 'Interview result: Passed',
+  waiting: 'Interview result: Pending',
+  not_passed: 'Interview result: Not selected',
+  cancelled: 'Interview cancelled',
+  rescheduled: 'Interview rescheduled',
+};
+
 const toNote = (r) => ({ ...r, id: String(r.id), pinned: Boolean(r.pinned), edited: Boolean(r.edited) });
 
 // Ownership check for tab endpoints. Includes archived and trashed jobs.
@@ -132,7 +149,7 @@ async function getTimeline(userId, id) {
     knex('application_notes').where('application_id', id)
       .select('id', 'body', z('created_at', 'at')),
     knex('interviews').where('application_id', id)
-      .select('id', 'round_type', 'outcome', z('created_at', 'at')),
+      .select('id', 'round_type', 'outcome', z('created_at', 'at'), z('updated_at', 'updatedAt')),
     knex('reminders').where({ user_id: userId, application_id: id, status: 'done' })
       .select('id', 'title', z('completed_at', 'at')),
     knex('application_documents as ad').join('documents as doc', 'doc.id', 'ad.document_id')
@@ -141,11 +158,25 @@ async function getTimeline(userId, id) {
   ]);
 
   const items = [
-    ...hist.map((h) => ({ id: `s${h.id}`, type: 'stage', at: h.at,
-      title: h.from_status ? `Moved from ${h.from_status} to ${h.to_status}` : `Added as ${h.to_status}` })),
-    ...notes.map((n) => ({ id: `n${n.id}`, type: 'note', at: n.at, title: 'Note added', detail: n.body.slice(0, 140) })),
-    ...ints.map((i) => ({ id: `i${i.id}`, type: 'interview', at: i.at,
-      title: i.outcome === 'scheduled' ? 'Interview scheduled' : `Interview result: ${i.outcome}`, detail: i.round_type })),
+    ...hist.map((h) => ({
+      id: `s${h.id}`, type: 'stage', at: h.at,
+      title: h.from_status
+        ? `Moved from ${STAGE_LABEL[h.from_status]} to ${STAGE_LABEL[h.to_status]}`
+        : `Added as ${STAGE_LABEL[h.to_status]}`,
+    })),
+    ...notes.map((n) => ({
+      id: `n${n.id}`, type: 'note', at: n.at, title: 'Note added',
+      detail: n.body.length > 140 ? `${n.body.slice(0, 140)}…` : n.body,
+    })),
+    ...ints.flatMap((i) => {
+      const round = ROUND_LABEL[i.round_type] ?? i.round_type;
+      const out = [{ id: `i${i.id}`, type: 'interview', at: i.at, title: 'Interview scheduled', detail: round }];
+      // No result timestamp exists, so updated_at is the closest time.
+      if (i.outcome !== 'scheduled') {
+        out.push({ id: `io${i.id}`, type: 'interview', at: i.updatedAt, title: RESULT_LABEL[i.outcome], detail: round });
+      }
+      return out;
+    }),
     ...rems.map((r) => ({ id: `r${r.id}`, type: 'reminder', at: r.at, title: 'Reminder done', detail: r.title })),
     ...files.map((f) => ({ id: `f${f.id}`, type: 'file', at: f.at, title: `Attached ${f.name}` })),
   ].filter((i) => i.at);
