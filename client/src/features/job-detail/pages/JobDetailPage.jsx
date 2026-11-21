@@ -42,7 +42,7 @@ const actions = {
 };
 
 export default function JobDetailPage() {
-  const { jobId } = useParams();
+  const { id: jobId } = useParams();
   const { status, job, saveStatus, saveJob, retrySave, reload } = useJobDetail(jobId);
 
   if (status === "loading") return <JobDetailSkeleton />;

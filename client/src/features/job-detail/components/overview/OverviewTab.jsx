@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { CLOSED_STAGES, OFFER_STAGES } from "../../utils/detailOptions";
 import BasicsPanel from "./BasicsPanel";
 import ClosedPanel from "./ClosedPanel";
-import DangerZone from "./DangerZone";
 import DatesPanel from "./DatesPanel";
 import DescriptionPanel from "./DescriptionPanel";
 import NextUpCard from "./NextUpCard";
@@ -48,7 +47,6 @@ export default function OverviewTab({ job, form, readOnly, actions, onSave, onDe
 
       {!readOnly && (
         <>
-          <DangerZone onArchive={() => actions.archive(job.id)} onDelete={onDelete} />
           <div className="flex items-center justify-end gap-2.5 pt-[18px]">
             <Link className="link" to="/jobs">
               Cancel

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import Banner from "../../../components/ui/Banner";
 import Breadcrumbs from "../../../components/ui/Breadcrumbs";
 import useJobForm from "../hooks/useJobForm";
@@ -19,18 +20,16 @@ import TimelineTab from "./timeline/TimelineTab";
 
 // Rendered only once the job has loaded, so the form hook always has data.
 export default function JobDetailView({ job, actions, saveStatus, onSave, onRetrySave }) {
+  const { state } = useLocation();
   const [tab, setTab] = useJobTab();
   const form = useJobForm(job);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [reminderDialog, setReminderDialog] = useState(null); // null | { reminder? }
 
+  const origin = state?.from === "board" ? { label: "Board", to: "/board" } : { label: "List", to: "/jobs" };
+
   const readOnly = Boolean(job.archived || job.deletedAt);
-  const counts = {
-    notes: job.notes.length,
-    documents: job.documents.length,
-    interviews: job.interviews.length,
-    reminders: job.reminders.length,
-  };
+  const counts = job.counts;
 
   // Header fields autosave; everything else saves from the overview form.
   const handleTitleBlur = () => {
@@ -55,7 +54,7 @@ export default function JobDetailView({ job, actions, saveStatus, onSave, onRetr
 
   return (
     <>
-      <Breadcrumbs items={[{ label: "List", to: "/jobs" }, { label: job.title }]} />
+      <Breadcrumbs items={[origin, { label: job.title }]} />
 
       {job.archived && (
         <Banner
