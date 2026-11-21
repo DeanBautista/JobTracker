@@ -125,6 +125,10 @@
     @apply mx-auto;
     width: min(100% - 2 * var(--spacing-page), var(--container-page));
   }
+
+  textarea.field {
+    @apply py-2.5 leading-normal;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

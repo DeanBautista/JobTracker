@@ -1,5 +1,8 @@
 import { Link } from "react-router-dom";
+import useToast from "@/hooks/useToast";
+import useJobOrigin from "../../hooks/useJobOrigin";
 import { CLOSED_STAGES, OFFER_STAGES } from "../../utils/detailOptions";
+import { getChanges } from "../../utils/jobForm";
 import BasicsPanel from "./BasicsPanel";
 import ClosedPanel from "./ClosedPanel";
 import DatesPanel from "./DatesPanel";
@@ -8,13 +11,23 @@ import NextUpCard from "./NextUpCard";
 import OfferPanel from "./OfferPanel";
 import PayPanel from "./PayPanel";
 
-// Archived / trashed jobs reuse the same panels: the <fieldset disabled> makes
-// every control read-only, so there is no second read-only copy of the markup.
-export default function OverviewTab({ job, form, readOnly, actions, onSave, onDelete, onTabChange }) {
+export default function OverviewTab({ job, form, readOnly, onSave, onTabChange }) {
   const { stage } = form.values;
+  const { show } = useToast();
+  const origin = useJobOrigin();
+
+  const handleSave = () => {
+    const changes = getChanges(job, form.values);
+    if (Object.keys(changes).length === 0) return show("No changes to save.", { duration: 3000 });
+    // Closing a job: send the reason and note shown in the Closed panel.
+    if (changes.stage && CLOSED_STAGES.includes(changes.stage)) {
+      changes.closure = { reason: form.values.closeReason, note: form.values.closureNote.trim() };
+    }
+    onSave(changes);
+  };
 
   return (
-    <form onSubmit={form.submit(onSave)} noValidate aria-label="Job overview">
+    <form onSubmit={form.submit(handleSave)} noValidate aria-label="Job overview">
       {form.showSummary && (
         <div role="alert" className="mb-[18px] rounded-[7px] border border-danger bg-danger-soft px-3.5 py-2.5 text-meta text-danger">
           Please fix the highlighted fields before saving.
@@ -29,14 +42,7 @@ export default function OverviewTab({ job, form, readOnly, actions, onSave, onDe
             <DatesPanel form={form} />
             <DescriptionPanel form={form} />
             {OFFER_STAGES.includes(stage) && <OfferPanel form={form} />}
-            {CLOSED_STAGES.includes(stage) && (
-              <ClosedPanel
-                form={form}
-                readOnly={readOnly}
-                onEdit={() => actions.editClosure(job.id, form.values)}
-                onReopen={() => actions.reopen(job.id)}
-              />
-            )}
+            {CLOSED_STAGES.includes(stage) && <ClosedPanel form={form} />}
           </div>
         </fieldset>
 
@@ -46,16 +52,14 @@ export default function OverviewTab({ job, form, readOnly, actions, onSave, onDe
       </div>
 
       {!readOnly && (
-        <>
-          <div className="flex items-center justify-end gap-2.5 pt-[18px]">
-            <Link className="link" to="/jobs">
-              Cancel
-            </Link>
-            <button type="submit" className="btn btn-primary">
-              Save changes
-            </button>
-          </div>
-        </>
+        <div className="flex items-center justify-end gap-2.5 pt-[18px]">
+          <Link className="link" to={origin.to}>
+            Cancel
+          </Link>
+          <button type="submit" className="btn btn-primary">
+            Save changes
+          </button>
+        </div>
       )}
     </form>
   );

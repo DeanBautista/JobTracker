@@ -5,6 +5,15 @@ const d = (col, as) => knex.raw(`DATE_FORMAT(${col}, '%Y-%m-%d') AS ${as}`);    
 const dash = (v) => (v ? v.replace(/_/g, '-') : v);
 const num = (v) => (v == null ? null : Number(v));
 
+const CLOSED = ['accepted', 'rejected', 'withdrawn', 'ghosted'];
+const OFFER = ['offer', 'accepted'];
+
+const NOTE_COLS = [
+  'id', 'body as text', 'is_pinned as pinned', z('created_at', 'createdAt'),
+  knex.raw('updated_at > created_at AS edited'),
+];
+const toNote = (r) => ({ ...r, id: String(r.id), pinned: Boolean(r.pinned), edited: Boolean(r.edited) });
+
 // Ownership check for tab endpoints. Includes archived and trashed jobs.
 const owns = async (userId, id) =>
   Boolean(await knex('applications').where({ id, user_id: userId }).first('id'));
@@ -63,10 +72,9 @@ async function getOverview(userId, id) {
 async function getNotes(id) {
   const rows = await knex('application_notes')
     .where('application_id', id)
-    .select('id', 'body as text', 'is_pinned as pinned', z('created_at', 'createdAt'),
-      knex.raw('updated_at > created_at AS edited'))
+    .select(NOTE_COLS)
     .orderBy([{ column: 'is_pinned', order: 'desc' }, { column: 'created_at', order: 'desc' }]);
-  return rows.map((r) => ({ ...r, id: String(r.id), pinned: Boolean(r.pinned), edited: Boolean(r.edited) }));
+  return rows.map(toNote);
 }
 
 async function getDocuments(userId, id) {
@@ -145,4 +153,121 @@ async function getTimeline(userId, id) {
   return items.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 100);
 }
 
-module.exports = { owns, getOverview, getNotes, getDocuments, getInterviews, getReminders, getTimeline };
+// Archived and trashed jobs are read-only, so they come back as not found.
+async function update(userId, id, v) {
+  const { company, offer, closure, status, ...cols } = v;
+
+  const result = await knex.transaction(async (trx) => {
+    const job = await trx('applications')
+      .where({ id, user_id: userId }).whereNull('deleted_at').whereNull('archived_at')
+      .forUpdate()
+      .first('status', 'salary_min', 'salary_max');
+    if (!job) return { notFound: true };
+
+    const min = 'salary_min' in cols ? cols.salary_min : job.salary_min;
+    const max = 'salary_max' in cols ? cols.salary_max : job.salary_max;
+    if (min != null && max != null && Number(max) < Number(min)) {
+      return { errors: { salaryMax: 'Maximum salary must be at least the minimum.' } };
+    }
+
+    const patch = { ...cols, last_activity_at: knex.fn.now() };
+
+    if (company) {
+      await trx('companies').insert({ user_id: userId, name: company }).onConflict().ignore();
+      patch.company_id = (await trx('companies').where({ user_id: userId, name: company }).first('id')).id;
+    }
+
+    const next = status ?? job.status;
+    const changed = status !== undefined && status !== job.status;
+    const wasClosed = CLOSED.includes(job.status);
+    const nowClosed = CLOSED.includes(next);
+
+    if (changed) {
+      const { minPos } = await trx('applications')
+        .where({ user_id: userId, status }).whereNull('deleted_at').whereNull('archived_at')
+        .min({ minPos: 'board_position' }).first();
+      Object.assign(patch, { status, board_position: (minPos ?? 1) - 1, stage_changed_at: knex.fn.now() });
+
+      if (nowClosed && !wasClosed) Object.assign(patch, { closed_stage: job.status, closed_at: knex.fn.now() });
+      if (!nowClosed) Object.assign(patch, { closed_stage: null, closed_at: null, closed_reason: null, closing_note: null });
+    }
+
+    if (closure && nowClosed) {
+      const { closedDate, closed_stage: prev, ...rest } = closure;
+      Object.assign(patch, rest); // reason, note
+      if (wasClosed) { // already closed: stage and date are editable
+        if (prev) patch.closed_stage = prev;
+        if (closedDate) patch.closed_at = `${closedDate} 00:00:00`;
+      }
+    }
+
+    if (offer && OFFER.includes(next)) Object.assign(patch, offer);
+
+    await trx('applications').where({ id, user_id: userId }).update(patch);
+    if (changed) await trx('status_history').insert({ application_id: id, from_status: job.status, to_status: status });
+    return { ok: true };
+  });
+
+  if (!result.ok) return result;
+  return { job: await getOverview(userId, id) };
+}
+
+async function createNote(userId, id, text) {
+  return knex.transaction(async (trx) => {
+    const job = await trx('applications')
+      .where({ id, user_id: userId }).whereNull('deleted_at').whereNull('archived_at')
+      .forUpdate().first('id');
+    if (!job) return null;
+
+    const [noteId] = await trx('application_notes').insert({ application_id: id, body: text });
+    await trx('applications').where({ id }).update({ last_activity_at: knex.fn.now() });
+    return toNote(await trx('application_notes').where('id', noteId).select(NOTE_COLS).first());
+  });
+}
+
+// Edit text and/or pin. Archived and trashed jobs are read-only, so they return null.
+async function updateNote(userId, id, noteId, { text, pinned }) {
+  return knex.transaction(async (trx) => {
+    const job = await trx('applications')
+      .where({ id, user_id: userId }).whereNull('deleted_at').whereNull('archived_at')
+      .forUpdate().first('id');
+    if (!job) return null;
+
+    const note = await trx('application_notes').where({ id: noteId, application_id: id }).forUpdate().first('id');
+    if (!note) return null;
+
+    const patch = {};
+    if (text !== undefined) patch.body = text;
+    if (pinned !== undefined) patch.is_pinned = pinned;
+    // Pinning alone must not count as "edited", so keep updated_at as it is.
+    if (text === undefined) patch.updated_at = knex.raw('updated_at');
+
+    await trx('application_notes').where('id', noteId).update(patch);
+    if (text !== undefined) await trx('applications').where({ id }).update({ last_activity_at: knex.fn.now() });
+    return toNote(await trx('application_notes').where('id', noteId).select(NOTE_COLS).first());
+  });
+}
+
+async function deleteNote(userId, id, noteId) {
+  return knex.transaction(async (trx) => {
+    const job = await trx('applications')
+      .where({ id, user_id: userId }).whereNull('deleted_at').whereNull('archived_at')
+      .forUpdate().first('id');
+    if (!job) return false;
+    return (await trx('application_notes').where({ id: noteId, application_id: id }).del()) > 0;
+  });
+}
+
+module.exports = { 
+    owns, 
+    getOverview, 
+    update, 
+    createNote, 
+    getNotes, 
+    getDocuments, 
+    getInterviews, 
+    getReminders, 
+    getTimeline, 
+    updateNote, 
+    deleteNote 
+};

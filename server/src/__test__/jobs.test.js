@@ -659,6 +659,64 @@ describe('GET /jobs/:id', () => {
   });
 });
 
+describe('PATCH /jobs/:id', () => {
+  it('updates and returns the job', async () => {
+    detail.update.mockResolvedValue({ job: { id: '101', priority: 'high' } });
+    const res = await request(app).patch('/jobs/101').set(auth()).send({ priority: 'high' });
+    expect(res.status).toBe(200);
+    expect(detail.update).toHaveBeenCalledWith(expect.anything(), 101, { priority: 'high' });
+  });
+
+  it('422s on invalid values', async () => {
+    const res = await request(app).patch('/jobs/101').set(auth()).send({ stage: 'nope', title: '' });
+    expect(res.status).toBe(422);
+    expect(detail.update).not.toHaveBeenCalled();
+  });
+
+  it('422s on an empty body', async () => {
+    const res = await request(app).patch('/jobs/101').set(auth()).send({});
+    expect(res.status).toBe(422);
+  });
+
+  it('404s for archived, trashed or missing jobs', async () => {
+    detail.update.mockResolvedValue({ notFound: true });
+    const res = await request(app).patch('/jobs/101').set(auth()).send({ priority: 'low' });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('notes', () => {
+  it('creates a note', async () => {
+    detail.createNote.mockResolvedValue({ id: '1', text: 'hi', pinned: false });
+    const res = await request(app).post('/jobs/101/notes').set(auth()).send({ text: ' hi ' });
+    expect(res.status).toBe(201);
+    expect(detail.createNote).toHaveBeenCalledWith(expect.anything(), 101, 'hi');
+  });
+
+  it('422s on an empty note', async () => {
+    const res = await request(app).post('/jobs/101/notes').set(auth()).send({ text: '  ' });
+    expect(res.status).toBe(422);
+  });
+
+  it('pins a note', async () => {
+    detail.updateNote.mockResolvedValue({ id: '1', pinned: true });
+    const res = await request(app).patch('/jobs/101/notes/1').set(auth()).send({ pinned: true });
+    expect(res.status).toBe(200);
+  });
+
+  it('404s when the note is missing', async () => {
+    detail.updateNote.mockResolvedValue(null);
+    const res = await request(app).patch('/jobs/101/notes/9').set(auth()).send({ pinned: true });
+    expect(res.status).toBe(404);
+  });
+
+  it('deletes a note', async () => {
+    detail.deleteNote.mockResolvedValue(true);
+    const res = await request(app).delete('/jobs/101/notes/1').set(auth());
+    expect(res.status).toBe(200);
+  });
+});
+
 describe('GET /jobs/:id/notes', () => {
   it('404s when the job is not theirs', async () => {
     detail.owns.mockResolvedValue(false);

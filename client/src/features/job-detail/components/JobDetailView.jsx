@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
 import Banner from "../../../components/ui/Banner";
 import Breadcrumbs from "../../../components/ui/Breadcrumbs";
 import useJobForm from "../hooks/useJobForm";
+import useJobOrigin from "../hooks/useJobOrigin";
 import useJobTab from "../hooks/useJobTab";
-import { JOB_TABS } from "../utils/detailOptions";
+import { CLOSED_STAGES, JOB_TABS } from "../utils/detailOptions";
 import { formatDate } from "../utils/formatters";
+import ArchiveJobDialog from "./ArchiveJobDialog";
 import DeleteJobDialog from "./DeleteJobDialog";
 import DocumentsTab from "./documents/DocumentsTab";
 import InterviewsTab from "./interviews/InterviewsTab";
@@ -18,33 +19,32 @@ import RemindersTab from "./reminders/RemindersTab";
 import SaveStatus from "./SaveStatus";
 import TimelineTab from "./timeline/TimelineTab";
 
-// Rendered only once the job has loaded, so the form hook always has data.
-export default function JobDetailView({ job, actions, saveStatus, onSave, onRetrySave }) {
-  const { state } = useLocation();
+export default function JobDetailView({ job, actions, saveStatus, onSave, onRetrySave, onCountChange }) {
   const [tab, setTab] = useJobTab();
+  const origin = useJobOrigin();
   const form = useJobForm(job);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [reminderDialog, setReminderDialog] = useState(null); // null | { reminder? }
-
-  const origin = state?.from === "board" ? { label: "Board", to: "/board" } : { label: "List", to: "/jobs" };
 
   const readOnly = Boolean(job.archived || job.deletedAt);
   const counts = job.counts;
 
-  // Header fields autosave; everything else saves from the overview form.
+  // Title autosaves on blur. Stage and priority only edit the form; Save changes sends them.
   const handleTitleBlur = () => {
     const title = form.values.title.trim();
     if (!title) return form.setError("title", "Enter a job title.");
     if (title !== job.title) onSave({ title });
   };
   const handleStageChange = (stage) => {
+    // Reopening: reset the closed-job fields so they don't count as unsaved changes.
+    if (CLOSED_STAGES.includes(form.values.stage) && !CLOSED_STAGES.includes(stage)) {
+      form.setValue("closeReason", "other");
+      form.setValue("closureNote", "");
+    }
     form.setValue("stage", stage);
-    onSave({ stage });
   };
-  const handlePriorityChange = (priority) => {
-    form.setValue("priority", priority);
-    onSave({ priority });
-  };
+  const handlePriorityChange = (priority) => form.setValue("priority", priority);
 
   const handleReminderSubmit = (data) => {
     if (reminderDialog?.reminder) actions.reminders.edit(job.id, reminderDialog.reminder.id, data);
@@ -89,7 +89,7 @@ export default function JobDetailView({ job, actions, saveStatus, onSave, onRetr
         onTitleBlur={handleTitleBlur}
         onStageChange={handleStageChange}
         onPriorityChange={handlePriorityChange}
-        onArchive={() => actions.job.archive(job.id)}
+        onArchive={() => setArchiveOpen(true)}
         onDelete={() => setDeleteOpen(true)}
         onAddReminder={() => setReminderDialog({})}
       />
@@ -97,17 +97,9 @@ export default function JobDetailView({ job, actions, saveStatus, onSave, onRetr
       <JobTabs tabs={JOB_TABS} active={tab} counts={counts} />
 
       {tab === "overview" && (
-        <OverviewTab
-          job={job}
-          form={form}
-          readOnly={readOnly}
-          actions={actions.job}
-          onSave={onSave}
-          onDelete={() => setDeleteOpen(true)}
-          onTabChange={setTab}
-        />
+        <OverviewTab job={job} form={form} readOnly={readOnly} onSave={onSave} onTabChange={setTab} />
       )}
-      {tab === "notes" && <NotesTab job={job} readOnly={readOnly} actions={actions.notes} />}
+      {tab === "notes" && <NotesTab job={job} readOnly={readOnly} onCountChange={onCountChange} />}
       {tab === "timeline" && <TimelineTab job={job} />}
       {tab === "documents" && <DocumentsTab job={job} readOnly={readOnly} actions={actions.documents} />}
       {tab === "interviews" && <InterviewsTab job={job} readOnly={readOnly} actions={actions.interviews} />}
@@ -128,6 +120,15 @@ export default function JobDetailView({ job, actions, saveStatus, onSave, onRetr
         onConfirm={() => {
           actions.job.remove(job.id);
           setDeleteOpen(false);
+        }}
+      />
+      <ArchiveJobDialog
+        open={archiveOpen}
+        job={job}
+        onClose={() => setArchiveOpen(false)}
+        onConfirm={() => {
+          actions.job.archive(job.id);
+          setArchiveOpen(false);
         }}
       />
       <ReminderDialog

@@ -1,18 +1,20 @@
-import { Link, useParams } from "react-router-dom";
-import StateCard from "../../../components/ui/StateCard";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import useToast from "@/hooks/useToast";
+import StateCard from "@/components/ui/StateCard";
 import JobDetailSkeleton from "../components/JobDetailSkeleton";
 import JobDetailView from "../components/JobDetailView";
 import useJobDetail from "../hooks/useJobDetail";
+import { api, getApiError } from "@/lib/api";
+import useJobOrigin from "../hooks/useJobOrigin";
+import { archiveJobs, notifyJobsChanged, restoreJobs, trashJobs, unarchiveJobs } from "@/features/jobs";
 
 // Placeholders until the API exists. Every action takes the job id first.
-const actions = {
+const placeholderActions = {
   job: {
     archive: (id) => console.info("archive", id),
     unarchive: (id) => console.info("unarchive", id),
     restore: (id) => console.info("restore", id),
     remove: (id) => console.info("move to trash", id),
-    reopen: (id) => console.info("reopen", id),
-    editClosure: (id, closure) => console.info("edit closure", id, closure),
   },
   notes: {
     add: (id, text) => console.info("add note", id, text),
@@ -43,7 +45,62 @@ const actions = {
 
 export default function JobDetailPage() {
   const { id: jobId } = useParams();
-  const { status, job, saveStatus, saveJob, retrySave, reload } = useJobDetail(jobId);
+  const navigate = useNavigate();
+  const origin = useJobOrigin();
+  const { show } = useToast();
+  const { status, job, saveStatus, saveJob, retrySave, reload, patchJob } = useJobDetail(jobId);
+
+  const run = async (request, onDone) => {
+    try {
+      await request();
+      onDone();
+    } catch (err) {
+      show(getApiError(err).message);
+    }
+  };
+
+  const undoTrash = async (id) => {
+    try {
+      await restoreJobs([Number(id)]);
+      notifyJobsChanged();
+      show("Job restored.");
+    } catch {
+      show("Could not undo. Restore it from Trash.");
+    }
+  };
+
+  const actions = {
+    ...placeholderActions,
+    job: {
+      ...placeholderActions.job,
+      archive: (id) =>
+        run(() => archiveJobs([Number(id)]), () => {
+          patchJob({ archived: true });
+          notifyJobsChanged();
+          show("Job archived.");
+        }),
+      unarchive: (id) =>
+        run(() => unarchiveJobs([Number(id)]), () => {
+          patchJob({ archived: false });
+          notifyJobsChanged();
+          show("Job unarchived.");
+        }),
+      restore: (id) =>
+        run(() => restoreJobs([Number(id)]), () => {
+          patchJob({ deletedAt: null });
+          notifyJobsChanged();
+          show("Job restored.");
+        }),
+      remove: (id) =>
+        run(() => trashJobs([Number(id)]), () => {
+          notifyJobsChanged();
+          navigate(origin.to);
+          show("Job moved to Trash.", { action: { label: "Undo", onClick: () => undoTrash(id) } });
+        }),
+    },
+  };
+
+  const setCount = (key, value) => patchJob((j) => ({ counts: { ...j.counts, [key]: value } }));
 
   if (status === "loading") return <JobDetailSkeleton />;
 
@@ -78,5 +135,14 @@ export default function JobDetailPage() {
     );
   }
 
-  return <JobDetailView job={job} actions={actions} saveStatus={saveStatus} onSave={saveJob} onRetrySave={retrySave} />;
+  return (
+    <JobDetailView
+      job={job}
+      actions={actions}
+      saveStatus={saveStatus}
+      onSave={saveJob}
+      onRetrySave={retrySave}
+      onCountChange={setCount}
+    />
+  );
 }
