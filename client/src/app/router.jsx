@@ -19,6 +19,7 @@ import { JobDetailPage } from "@/features/job-detail";
 import { OnboardingPage } from "@/features/onboarding";
 import { LandingPage } from "@/features/landing";
 import { BoardPage } from "@/features/board";
+import { TrashPage } from "@/features/trash";
 
 const router = createBrowserRouter([
   // { path: "/", element: <Navigate to="/dashboard" replace /> },
@@ -54,6 +55,7 @@ const router = createBrowserRouter([
               { path: "/jobs", element: <JobsListPage /> },
               { path: "/board", element: <BoardPage /> },
               { path: "/jobs/:id", element: <JobDetailPage /> },
+              { path: "trash", element: <TrashPage /> }
             ],
           },
         ],

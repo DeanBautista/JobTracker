@@ -60,7 +60,7 @@ jest.mock('./models/jobModel', () => ({
   findById: jest.fn(),
   list: jest.fn(),
   listBoard: jest.fn(),
-  listTrash: jest.fn(),
+  listTab: jest.fn(),
   move: jest.fn(),
   moveMany: jest.fn(),
   archive: jest.fn(),

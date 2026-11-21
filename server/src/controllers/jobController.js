@@ -2,13 +2,25 @@ const jobModel = require('../models/jobModel');
 const { validateCreateJob, parseListQuery, parseIds, MAX_BULK } = require('../validators/jobValidator');
 const { jobsToCsv } = require('../utils/jobsCsv');
 
-// GET /jobs?view=trash -> { jobs }
+const PAGE_SIZES = [10, 25, 50];
+
+const parsePaging = (query) => {
+  const page = Number.parseInt(query.page, 10);
+  const size = Number.parseInt(query.size, 10);
+  return {
+    page: page >= 1 ? Math.min(page, 100000) : 1,
+    size: PAGE_SIZES.includes(size) ? size : 10,
+  };
+};
+
+// GET /jobs?view=archive|trash&page&size -> { jobs, total, counts: { archive, trash } }
 const listJobs = async (req, res) => {
-  if (req.query.view === 'board') {
+  const { view } = req.query;
+  if (view === 'board') {
     return res.json({ jobs: await jobModel.listBoard(req.userId) });
   }
-  if (req.query.view === 'trash') {
-    return res.json({ jobs: await jobModel.listTrash(req.userId) });
+  if (view === 'archive' || view === 'trash') {
+    return res.json(await jobModel.listTab(req.userId, view, parsePaging(req.query)));
   }
   const result = await jobModel.list(req.userId, parseListQuery(req.query));
   res.json(result);

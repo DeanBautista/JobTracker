@@ -340,21 +340,44 @@ const emptyTrash = (userId) =>
 const purgeExpiredTrash = () =>
   knex('applications').whereNotNull('deleted_at').whereRaw('deleted_at < NOW() - INTERVAL 30 DAY').del();
 
-async function listTrash(userId) {
-  const rows = await knex('applications as a')
-    .join('companies as c', 'c.id', 'a.company_id')
-    .select(
-      'a.id',
-      'a.title',
-      'c.name as company',
-      'a.status as stage',
-      knex.raw("DATE_FORMAT(a.deleted_at, '%Y-%m-%dT%H:%i:%sZ') AS deletedAt"),
-      knex.raw('GREATEST(0, 30 - TIMESTAMPDIFF(DAY, a.deleted_at, NOW())) AS daysLeft'),
-    )
-    .where('a.user_id', userId)
-    .whereNotNull('a.deleted_at')
-    .orderBy('a.deleted_at', 'desc');
-  return rows.map((r) => ({ ...r, daysLeft: Number(r.daysLeft) }));
+// Archive and Trash tabs. Both are paginated, and `counts` feeds the tab badges.
+const TAB_SCOPES = {
+  archive: (q) => q.whereNull('a.deleted_at').whereNotNull('a.archived_at'),
+  trash: (q) => q.whereNotNull('a.deleted_at'),
+};
+
+const TAB_COLUMNS = {
+  archive: [knex.raw("DATE_FORMAT(a.archived_at, '%Y-%m-%dT%H:%i:%sZ') AS archivedAt")],
+  trash: [
+    knex.raw("DATE_FORMAT(a.deleted_at, '%Y-%m-%dT%H:%i:%sZ') AS deletedAt"),
+    knex.raw('GREATEST(0, 30 - TIMESTAMPDIFF(DAY, a.deleted_at, NOW())) AS daysLeft'),
+  ],
+};
+
+const TAB_SORT = { archive: 'a.archived_at', trash: 'a.deleted_at' };
+
+async function listTab(userId, view, { page, size }) {
+  const owned = () => knex('applications as a').where('a.user_id', userId);
+
+  const countOf = async (tab) => {
+    const { total } = await TAB_SCOPES[tab](owned()).count({ total: 'a.id' }).first();
+    return Number(total);
+  };
+
+  const [archive, trash, rows] = await Promise.all([
+    countOf('archive'),
+    countOf('trash'),
+    TAB_SCOPES[view](owned())
+      .join('companies as c', 'c.id', 'a.company_id')
+      .select('a.id', 'a.title', 'c.name as company', 'a.status as stage', ...TAB_COLUMNS[view])
+      .orderBy(TAB_SORT[view], 'desc')
+      .orderBy('a.id', 'desc') // stable paging when dates tie
+      .limit(size)
+      .offset((page - 1) * size),
+  ]);
+
+  const jobs = rows.map((r) => ('daysLeft' in r ? { ...r, daysLeft: Number(r.daysLeft) } : r));
+  return { jobs, total: view === 'archive' ? archive : trash, counts: { archive, trash } };
 }
 
 // Bulk "Move to": every selected job goes to the TOP of the target column, in selection order.
@@ -423,7 +446,7 @@ function listFilteredForExport(userId, f) {
 }
 
 module.exports = {
-  list, listBoard, listTrash, findById, findDuplicate, create, move, moveMany,
+  list, listBoard, listTab, findById, findDuplicate, create, move, moveMany,
   archive, unarchive, trash, restore, deleteForever, emptyTrash, purgeExpiredTrash, listFilteredForExport,
   STAGES, CLOSE_REASONS,
 };

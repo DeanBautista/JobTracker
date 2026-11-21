@@ -334,24 +334,50 @@ describe('PATCH /jobs/:id/move', () => {
   });
 });
 
-describe('GET /jobs?view=trash', () => {
+describe.each(['archive', 'trash'])('GET /jobs?view=%s', (view) => {
+  const result = {
+    jobs: [{ id: 1, title: 'Dev' }],
+    total: 1,
+    counts: { archive: 1, trash: 1 },
+  };
+
   test('returns 401 without a token', async () => {
-    const res = await request(app).get('/jobs?view=trash');
+    const res = await request(app).get(`/jobs?view=${view}`);
 
     expect(res.statusCode).toBe(401);
-    expect(jobModel.listTrash).not.toHaveBeenCalled();
+    expect(jobModel.listTab).not.toHaveBeenCalled();
   });
 
-  test('returns the trashed jobs for the signed-in user', async () => {
-    const jobs = [{ id: 1, title: 'Dev', deletedAt: '2026-11-20T00:00:00Z', daysLeft: 30 }];
-    jobModel.listTrash.mockResolvedValue(jobs);
+  test('returns the page, total and tab counts for the signed-in user, with default paging', async () => {
+    jobModel.listTab.mockResolvedValue(result);
 
-    const res = await request(app).get('/jobs?view=trash').set(auth());
+    const res = await request(app).get(`/jobs?view=${view}`).set(auth());
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ jobs });
-    expect(jobModel.listTrash).toHaveBeenCalledWith(147);
+    expect(res.body).toEqual(result);
+    expect(jobModel.listTab).toHaveBeenCalledWith(147, view, { page: 1, size: 10 });
     expect(jobModel.list).not.toHaveBeenCalled();
+  });
+
+  test('passes page and size to the model', async () => {
+    jobModel.listTab.mockResolvedValue(result);
+
+    await request(app).get(`/jobs?view=${view}&page=3&size=25`).set(auth());
+
+    expect(jobModel.listTab).toHaveBeenCalledWith(147, view, { page: 3, size: 25 });
+  });
+
+  test.each([
+    ['a negative page', 'page=-2&size=10', { page: 1, size: 10 }],
+    ['a non-numeric page', 'page=abc', { page: 1, size: 10 }],
+    ['an unsupported size', 'size=999', { page: 1, size: 10 }],
+    ['a huge page', 'page=999999999', { page: 100000, size: 10 }],
+  ])('falls back to safe paging for %s', async (_label, query, expected) => {
+    jobModel.listTab.mockResolvedValue(result);
+
+    await request(app).get(`/jobs?view=${view}&${query}`).set(auth());
+
+    expect(jobModel.listTab).toHaveBeenCalledWith(147, view, expected);
   });
 });
 
