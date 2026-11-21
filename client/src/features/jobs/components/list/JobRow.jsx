@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { formatShortDate } from "../../utils/formatDate";
 import { optionLabel } from "../../utils/jobOptions";
 import { PriorityBadge, ReminderTag, StageBadge } from "../shared/JobBadges";
@@ -25,6 +25,8 @@ function buildMeta(job) {
 }
 
 export default function JobRow({ job, visible, selected, onToggle, menuOpensUp, actions }) {
+  const location = useLocation();
+  const from = `${location.pathname}${location.search}`; // e.g. /jobs?page=2&stage=applied
   return (
     <tr
       className={`mb-2.5 grid grid-cols-[34px_minmax(0,1fr)_44px] gap-x-2 gap-y-1 rounded-lg border border-rule py-3.5 pr-2 pl-3.5 tbl:mb-0 tbl:table-row tbl:rounded-none tbl:border-x-0 tbl:border-t-0 tbl:p-0 tbl:last:border-b-0 ${
@@ -42,7 +44,11 @@ export default function JobRow({ job, visible, selected, onToggle, menuOpensUp, 
       </Cell>
 
       <Cell className="col-start-2 tbl:min-w-[190px]">
-        <Link to={`/jobs/${job.id}`} className="font-semibold no-underline underline-offset-3 hover:underline">
+        <Link
+          to={`/jobs/${job.id}`}
+          state={{ from }}
+          className="font-semibold no-underline underline-offset-3 hover:underline"
+        >
           {job.title}
         </Link>
         <span className="mt-px hidden text-[13px] text-muted tbl:block">{job.company}</span>
