@@ -3,26 +3,42 @@ import Field from "../../../../components/ui/Field";
 import Panel from "../../../../components/ui/Panel";
 import SectionHeader from "../../../../components/ui/SectionHeader";
 import StateCard from "../../../../components/ui/StateCard";
+import useJobNotes from "../../hooks/useJobNotes";
 import NoteCard from "./NoteCard";
 import NoteEditDialog from "./NoteEditDialog";
 
-export default function NotesTab({ job, readOnly, actions }) {
+export default function NotesTab({ job, readOnly, onCountChange }) {
+  const { status, notes: loaded, retry, add, edit, togglePin, remove } = useJobNotes(job.id, onCountChange);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(null);
 
   // Pinned first, then newest.
   const notes = useMemo(
-    () => [...job.notes].sort((a, b) => Number(b.pinned) - Number(a.pinned) || new Date(b.createdAt) - new Date(a.createdAt)),
-    [job.notes],
+    () => [...loaded].sort((a, b) => Number(b.pinned) - Number(a.pinned) || new Date(b.createdAt) - new Date(a.createdAt)),
+    [loaded],
   );
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
-    if (!draft.trim()) return setError("Add a note before saving.");
-    actions.add(job.id, draft.trim());
-    setDraft("");
-    setError("");
+    const text = draft.trim();
+    if (!text) return setError("Add a note before saving.");
+    setSaving(true);
+    const ok = await add(text);
+    setSaving(false);
+    if (ok) {
+      setDraft("");
+      setError("");
+    }
+  };
+
+  // Only send what changed, so pinning from the dialog doesn't mark the note as edited.
+  const handleEdit = async (data) => {
+    const patch = {};
+    if (data.text !== editing.text) patch.text = data.text;
+    if (data.pinned !== editing.pinned) patch.pinned = data.pinned;
+    if (Object.keys(patch).length === 0 || (await edit(editing.id, patch))) setEditing(null);
   };
 
   return (
@@ -31,7 +47,7 @@ export default function NotesTab({ job, readOnly, actions }) {
         id="notes-heading"
         title="Notes"
         subtitle="Keep recruiter updates and your own thoughts in one place."
-        aside={<span className="label">{notes.length === 1 ? "1 note" : `${notes.length} notes`}</span>}
+        aside={status === "success" ? <span className="label">{notes.length === 1 ? "1 note" : `${notes.length} notes`}</span> : null}
       />
 
       {!readOnly && (
@@ -55,8 +71,8 @@ export default function NotesTab({ job, readOnly, actions }) {
                 }}
               />
               <div className="flex justify-end">
-                <button type="submit" className="btn btn-primary">
-                  Add note
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? "Adding…" : "Add note"}
                 </button>
               </div>
             </form>
@@ -64,32 +80,46 @@ export default function NotesTab({ job, readOnly, actions }) {
         </Panel>
       )}
 
-      <SectionHeader level="sub" title="All notes" subtitle="Pinned first, then newest." aside={<span className="text-[12.5px] text-muted">{notes.length} total</span>} />
+      <SectionHeader
+        level="sub"
+        title="All notes"
+        subtitle="Pinned first, then newest."
+        aside={status === "success" ? <span className="text-[12.5px] text-muted">{notes.length} total</span> : null}
+      />
 
-      {notes.length === 0 ? (
-        <StateCard icon="✎" title="No notes yet" message="Add a note after a call, application update, or interview." />
-      ) : (
-        notes.map((note) => (
-          <NoteCard
-            key={note.id}
-            note={note}
-            readOnly={readOnly}
-            onTogglePin={() => actions.togglePin(job.id, note.id, !note.pinned)}
-            onEdit={() => setEditing(note)}
-            onDelete={() => actions.remove(job.id, note.id)}
-          />
-        ))
+      {status === "loading" && <p className="text-sm text-muted">Loading notes…</p>}
+
+      {status === "error" && (
+        <StateCard
+          role="alert"
+          icon="!"
+          title="Could not load notes"
+          message="Your notes could not be loaded. Try again."
+          action={
+            <button type="button" className="btn" onClick={retry}>
+              Try again
+            </button>
+          }
+        />
       )}
 
-      <NoteEditDialog
-        open={Boolean(editing)}
-        note={editing}
-        onClose={() => setEditing(null)}
-        onSubmit={(data) => {
-          actions.edit(job.id, editing.id, data);
-          setEditing(null);
-        }}
-      />
+      {status === "success" &&
+        (notes.length === 0 ? (
+          <StateCard icon="✎" title="No notes yet" message="Add a note after a call, application update, or interview." />
+        ) : (
+          notes.map((note) => (
+            <NoteCard
+              key={note.id}
+              note={note}
+              readOnly={readOnly}
+              onTogglePin={() => togglePin(note.id, !note.pinned)}
+              onEdit={() => setEditing(note)}
+              onDelete={() => remove(note.id)}
+            />
+          ))
+        ))}
+
+      <NoteEditDialog open={Boolean(editing)} note={editing} onClose={() => setEditing(null)} onSubmit={handleEdit} />
     </div>
   );
 }

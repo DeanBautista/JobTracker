@@ -30,8 +30,6 @@ export function toFormValues(job) {
     offerNotes: job.offer?.notes ?? "",
 
     closeReason: job.closure?.reason ?? "other",
-    previousStage: job.closure?.previousStage ?? "interview",
-    closedDate: job.closure?.closedDate ?? "",
     closureNote: job.closure?.note ?? "",
   };
 }
@@ -62,7 +60,6 @@ export function validateJobForm(v) {
 
 const num = (value) => (value === "" ? null : Number(value));
 
-// Shape the API will receive on "Save changes".
 export function toPayload(v) {
   return {
     title: v.title.trim(),
@@ -84,6 +81,17 @@ export function toPayload(v) {
     deadline: v.deadline,
     description: v.description,
     offer: { salary: num(v.offerSalary), currency: v.offerCurrency, period: v.offerPeriod, replyBy: v.offerReplyBy, notes: v.offerNotes },
-    closure: { reason: v.closeReason, previousStage: v.previousStage, closedDate: v.closedDate, note: v.closureNote },
+    closure: { reason: v.closeReason, note: v.closureNote.trim() },
   };
+}
+
+// Fields whose values differ from the saved job. An empty object means nothing changed.
+export function getChanges(job, values) {
+  const before = toPayload(toFormValues(job));
+  const after = toPayload(values);
+  const changes = {};
+  for (const key of Object.keys(after)) {
+    if (JSON.stringify(after[key]) !== JSON.stringify(before[key])) changes[key] = after[key];
+  }
+  return changes;
 }

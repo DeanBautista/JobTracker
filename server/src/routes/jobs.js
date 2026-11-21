@@ -36,5 +36,9 @@ router.get('/:id/documents', requireAuth, d.getDocuments);
 router.get('/:id/interviews', requireAuth, d.getInterviews);
 router.get('/:id/reminders', requireAuth, d.getReminders);
 router.get('/:id/timeline', requireAuth, d.getTimeline);
+router.patch('/:id', requireAuth, d.updateJob);
+router.post('/:id/notes', requireAuth, d.createNote);
+router.patch('/:id/notes/:noteId', requireAuth, d.updateNote);
+router.delete('/:id/notes/:noteId', requireAuth, d.deleteNote);
 
 module.exports = router;

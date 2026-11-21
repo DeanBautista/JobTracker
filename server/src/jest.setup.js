@@ -80,6 +80,10 @@ jest.mock('./models/jobModel', () => ({
 jest.mock('./models/jobDetailModel', () => ({
   owns: jest.fn(),
   getOverview: jest.fn(),
+  update: jest.fn(),
+  createNote: jest.fn(),
+  updateNote: jest.fn(),
+  deleteNote: jest.fn(),
   getNotes: jest.fn(),
   getDocuments: jest.fn(),
   getInterviews: jest.fn(),
