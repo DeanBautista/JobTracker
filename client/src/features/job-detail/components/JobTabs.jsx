@@ -1,8 +1,10 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import cx from "../../../lib/cx";
 
 // Tabs wrap onto a second row on narrow screens instead of scrolling sideways.
 export default function JobTabs({ tabs, active, counts }) {
+  const { state } = useLocation();
+
   return (
     <nav aria-label="Job details tabs" className="mb-5 flex flex-wrap gap-x-1 border-b border-rule">
       {tabs.map((tab) => {
@@ -12,6 +14,7 @@ export default function JobTabs({ tabs, active, counts }) {
           <Link
             key={tab.key}
             to={`?tab=${tab.key}`}
+            state={state}
             aria-current={isActive ? "page" : undefined}
             className={cx(
               "-mb-px inline-flex min-h-11 items-center gap-1.5 border-b-2 px-3 text-[13.5px] whitespace-nowrap no-underline hover:bg-tint hover:text-ink",

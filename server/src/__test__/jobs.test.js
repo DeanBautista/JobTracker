@@ -1,6 +1,7 @@
 const request = require('supertest');
 const jobModel = require('../models/jobModel');
 const { signAccessToken } = require('../utils/tokens');
+const detail = require('../models/jobDetailModel');
 const app = require('../app');
 
 const auth = () => ({ Authorization: `Bearer ${signAccessToken(147)}` });
@@ -628,5 +629,48 @@ describe('GET /jobs/export', () => {
     const res = await request(app).get('/jobs/export').set(auth());
 
     expect(res.statusCode).toBe(404);
+  });
+});
+
+describe('GET /jobs/:id', () => {
+  it('returns the job overview', async () => {
+    detail.getOverview.mockResolvedValue({ id: '101', title: 'Frontend Developer', counts: { notes: 0 } });
+    const res = await request(app).get('/jobs/101').set(auth());
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe('101');
+    expect(detail.getOverview).toHaveBeenCalledWith(expect.anything(), 101);
+  });
+
+  it('404s when the job is missing or not theirs', async () => {
+    detail.getOverview.mockResolvedValue(null);
+    const res = await request(app).get('/jobs/999').set(auth());
+    expect(res.status).toBe(404);
+  });
+
+  it('422s on a bad id', async () => {
+    const res = await request(app).get('/jobs/abc').set(auth());
+    expect(res.status).toBe(422);
+    expect(detail.getOverview).not.toHaveBeenCalled();
+  });
+
+  it('401s without a token', async () => {
+    const res = await request(app).get('/jobs/101');
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /jobs/:id/notes', () => {
+  it('404s when the job is not theirs', async () => {
+    detail.owns.mockResolvedValue(false);
+    const res = await request(app).get('/jobs/101/notes').set(auth());
+    expect(res.status).toBe(404);
+    expect(detail.getNotes).not.toHaveBeenCalled();
+  });
+
+  it('returns notes for an owned job', async () => {
+    detail.owns.mockResolvedValue(true);
+    detail.getNotes.mockResolvedValue([{ id: '1', text: 'hi' }]);
+    const res = await request(app).get('/jobs/101/notes').set(auth());
+    expect(res.body).toEqual({ notes: [{ id: '1', text: 'hi' }] });
   });
 });

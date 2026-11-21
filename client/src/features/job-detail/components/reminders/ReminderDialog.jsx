@@ -18,6 +18,7 @@ function ReminderForm({ reminder, onClose, onSubmit }) {
 
   return (
     <form
+      className="flex min-h-0 flex-col"
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit({
@@ -29,7 +30,7 @@ function ReminderForm({ reminder, onClose, onSubmit }) {
         });
       }}
     >
-      <Modal.Body>
+      <div className="overflow-y-auto px-5 py-4">
         <FieldGrid>
           <Field id="reminder-title" label="Reminder" full required maxLength={160} placeholder="e.g. Follow up with recruiter" {...bind("title")} />
           <Field id="reminder-date" label="Due date" type="date" required {...bind("date")} />
@@ -37,28 +38,32 @@ function ReminderForm({ reminder, onClose, onSubmit }) {
           <Field as="select" id="reminder-origin" label="Origin" full options={REMINDER_ORIGINS} {...bind("origin")} />
           <Field as="textarea" id="reminder-note" label="Note" full rows={2} maxLength={1000} placeholder="Optional details" {...bind("note")} />
         </FieldGrid>
-      </Modal.Body>
-      <Modal.Foot>
+      </div>
+      <div className="flex justify-end gap-2 border-t border-rule px-5 py-3">
         <button type="button" className="btn" onClick={onClose}>
           Cancel
         </button>
         <button type="submit" className="btn btn-primary">
           {reminder ? "Save changes" : "Save reminder"}
         </button>
-      </Modal.Foot>
+      </div>
     </form>
   );
 }
 
-// Add when `reminder` is undefined, edit when given. Opened from the header and the reminders tab.
 export default function ReminderDialog({ open, job, reminder, onClose, onSubmit }) {
+  if (!open) return null; // Modal opens on mount, so unmount to close
+
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={reminder ? "Edit reminder" : "Add reminder"}
-      description={reminder ? "Update the reminder date or details." : `This reminder is for ${job.title} at ${job.company}.`}
-    >
+    <Modal labelledBy="reminder-dialog-title" onClose={onClose}>
+      <div className="border-b border-rule px-5 py-4">
+        <h2 id="reminder-dialog-title" className="text-base font-semibold">
+          {reminder ? "Edit reminder" : "Add reminder"}
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          {reminder ? "Update the reminder date or details." : `This reminder is for ${job.title} at ${job.company}.`}
+        </p>
+      </div>
       <ReminderForm reminder={reminder} onClose={onClose} onSubmit={onSubmit} />
     </Modal>
   );

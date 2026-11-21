@@ -45,6 +45,7 @@ export default function JobCard({ job, onMove, onArchive, onDelete, overlay = fa
           hijacking the pointer before dnd-kit sees it. */}
       <Link
         to={`/jobs/${job.id}`}
+        state={{ from: "board" }}
         draggable={false}
         aria-label={`Open ${title}`}
         className="absolute inset-0 z-[2] rounded-lg focus-visible:outline-none"

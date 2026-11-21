@@ -77,6 +77,16 @@ jest.mock('./models/jobModel', () => ({
   CLOSE_REASONS: ['not_enough_experience', 'position_closed', 'salary_mismatch', 'took_another_offer', 'no_response', 'other'],
 }));
 
+jest.mock('./models/jobDetailModel', () => ({
+  owns: jest.fn(),
+  getOverview: jest.fn(),
+  getNotes: jest.fn(),
+  getDocuments: jest.fn(),
+  getInterviews: jest.fn(),
+  getReminders: jest.fn(),
+  getTimeline: jest.fn(),
+}));
+
 jest.mock('./utils/mailer', () => ({
   sendVerificationEmail: jest.fn(),
   sendPasswordResetEmail: jest.fn(),

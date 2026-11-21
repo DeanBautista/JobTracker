@@ -1,6 +1,7 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
 const c = require('../controllers/jobController');
+const d = require('../controllers/jobDetailController');
 
 const router = express.Router();
 
@@ -28,5 +29,12 @@ router.patch('/:id/unarchive', requireAuth, c.unarchiveJob);
 router.patch('/:id/restore', requireAuth, c.restoreJob);
 router.delete('/:id', requireAuth, c.trashJob);
 router.delete('/:id/permanent', requireAuth, c.deleteJobForever);
+
+router.get('/:id', requireAuth, d.getJob);
+router.get('/:id/notes', requireAuth, d.getNotes);
+router.get('/:id/documents', requireAuth, d.getDocuments);
+router.get('/:id/interviews', requireAuth, d.getInterviews);
+router.get('/:id/reminders', requireAuth, d.getReminders);
+router.get('/:id/timeline', requireAuth, d.getTimeline);
 
 module.exports = router;

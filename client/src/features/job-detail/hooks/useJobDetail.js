@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getMockJob } from "../utils/mockJobDetail";
+import { api } from "@/lib/api"
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -21,11 +21,17 @@ export default function useJobDetail(jobId) {
     setSaveStatus("saved");
 
     (async () => {
-      await wait(400); // TODO: const job = await api.get(`/jobs/${jobId}`)
-      if (cancelled) return;
-      if (jobId === "error") return setState({ status: "error", job: null });
-      const job = getMockJob(jobId);
-      setState(job ? { status: "success", job } : { status: "not-found", job: null });
+      try {
+        const { data } = await api.get(`/jobs/${jobId}`);
+        if (cancelled) return;
+        // Stopgap: tabs still read these arrays until their endpoints are wired.
+        const job = { notes: [], documents: [], interviews: [], reminders: [], timeline: [], fileLibrary: [], ...data };
+        setState({ status: "success", job });
+      } catch (err) {
+        if (cancelled) return;
+        const code = err.response?.status;
+        setState({ status: code === 404 || code === 422 ? "not-found" : "error", job: null });
+      }
     })();
 
     return () => {
