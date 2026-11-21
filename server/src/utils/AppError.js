@@ -13,12 +13,17 @@ class AppError extends Error {
     return new AppError(400, code, message, details);
   }
 
+  // 422: the request is well-formed but the values are invalid.
+  static validation(code = 'validation_failed', message = 'Invalid input', details) {
+    return new AppError(422, code, message, details);
+  }
+
   static notFound(code = 'not_found', message = 'Resource not found') {
     return new AppError(404, code, message);
   }
 
-  static conflict(code, message) {
-    return new AppError(409, code, message);
+  static conflict(code, message, details) {
+    return new AppError(409, code, message, details);
   }
 
   static unauthorized(code = 'unauthorized', message = 'Authentication required') {
