@@ -22,7 +22,7 @@ describe('POST /jobs', () => {
     const res = await request(app).post('/jobs').set(auth()).send({});
 
     expect(res.statusCode).toBe(422);
-    expect(Object.keys(res.body.errors)).toEqual(
+    expect(Object.keys(res.body.fields)).toEqual(
       expect.arrayContaining(['title', 'company'])
     );
     expect(jobModel.create).not.toHaveBeenCalled();
@@ -35,7 +35,7 @@ describe('POST /jobs', () => {
       .send({ ...validBody, employmentType: 'fulltime' });
 
     expect(res.statusCode).toBe(422);
-    expect(res.body.errors.employmentType).toBeDefined();
+    expect(res.body.fields.employmentType).toBeDefined();
     expect(jobModel.create).not.toHaveBeenCalled();
   });
 
@@ -46,7 +46,7 @@ describe('POST /jobs', () => {
       .send({ ...validBody, link: 'not-a-url' });
 
     expect(res.statusCode).toBe(422);
-    expect(res.body.errors.link).toBeDefined();
+    expect(res.body.fields.link).toBeDefined();
   });
 
   test('returns 422 when max salary is below min salary', async () => {
@@ -56,7 +56,7 @@ describe('POST /jobs', () => {
       .send({ ...validBody, salaryMin: '50000', salaryMax: '40000' });
 
     expect(res.statusCode).toBe(422);
-    expect(res.body.errors.salaryMax).toBeDefined();
+    expect(res.body.fields.salaryMax).toBeDefined();
   });
 
   test('creates the job and returns 201', async () => {
@@ -132,7 +132,8 @@ describe('POST /jobs', () => {
       .send({ ...validBody, link: 'https://northwind.com/jobs/1' });
 
     expect(res.statusCode).toBe(409);
-    expect(res.body).toEqual({ duplicate });
+    expect(res.body.code).toBe('duplicate_job');
+    expect(res.body.fields).toEqual({ duplicate });
     expect(jobModel.findDuplicate).toHaveBeenCalledWith(147, 'https://northwind.com/jobs/1');
     expect(jobModel.create).not.toHaveBeenCalled();
   });
@@ -438,7 +439,7 @@ describe.each(BULK)('POST %s', (path, fn) => {
     const res = await request(app).post(path).set(auth()).send({ ids });
 
     expect(res.statusCode).toBe(422);
-    expect(res.body.errors.ids).toBeDefined();
+    expect(res.body.fields.ids).toBeDefined();
     expect(jobModel[fn]).not.toHaveBeenCalled();
   });
 
