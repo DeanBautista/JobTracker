@@ -6,7 +6,7 @@ import {
   TEXTAREA_CLASS,
   WORK_MODE_OPTIONS,
 } from "../../utils/jobFormOptions";
-import { EMPLOYMENT_TYPES, PAY_PERIODS } from "../../utils/jobOptions";
+import { CURRENCIES, EMPLOYMENT_TYPES, PAY_PERIODS } from "../../utils/jobOptions";
 import JobField from "../shared/JobField";
 
 function Options({ options }) {
@@ -59,7 +59,14 @@ export default function AddJobMoreDetails({ errors }) {
                 {(p) => <input {...p} name="salaryMax" type="number" min="0" step="any" inputMode="decimal" className={FIELD_CLASS} />}
               </JobField>
               <JobField label="Currency" compact error={errors.currency}>
-                {(p) => <input {...p} name="currency" type="text" placeholder="PHP" maxLength={3} autoCapitalize="characters" autoComplete="off" className={`${FIELD_CLASS} uppercase`} />}
+                {(p) => (
+                  <select {...p} name="currency" defaultValue="PHP" className={FIELD_CLASS}>
+                    {CURRENCIES.map((c) => {
+                      const { value, label } = typeof c === "string" ? { value: c, label: c } : c;
+                      return <option key={value} value={value}>{label}</option>;
+                    })}
+                  </select>
+                )}
               </JobField>
               <JobField label="Period" compact>
                 {(p) => <select {...p} name="salaryPeriod" defaultValue="" className={FIELD_CLASS}><Options options={PAY_PERIODS} /></select>}
@@ -80,7 +87,7 @@ export default function AddJobMoreDetails({ errors }) {
 
           <JobField
             label="Job description"
-            hint="Paste the posting so you still have it when it is taken down"
+            hint="Paste the posting so you still have it when it is taken down. Drag the bottom-right corner to make the box taller."
             className="sm:col-span-2"
           >
             {(p) => <textarea {...p} name="description" maxLength={20000} className={TEXTAREA_CLASS} />}

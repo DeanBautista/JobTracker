@@ -1,8 +1,14 @@
+const { CLOSE_REASONS } = require('../models/jobModel');
+
 const STATUSES = ['wishlist', 'applied', 'screening', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn', 'ghosted'];
 const WORK_MODES = ['onsite', 'hybrid', 'remote'];
 const EMPLOYMENT_TYPES = ['full_time', 'part_time', 'contract', 'internship'];
 const PERIODS = ['hour', 'month', 'year'];
 const PRIORITIES = ['low', 'medium', 'high'];
+
+// Stages that carry extra fields when a job is created.
+const CLOSING_STAGES = ['rejected', 'withdrawn', 'ghosted']; // closing reason + note
+const OFFER_STAGES = ['offer', 'accepted']; // offer details
 
 const SORT_KEYS = ['title', 'company', 'stage', 'priority', 'applied', 'days'];
 const PAGE_SIZES = [10, 25, 50];
@@ -61,11 +67,15 @@ function validateCreateJob(body) {
   const salaryPeriod = pick('salaryPeriod', PERIODS);
   const priority = pick('priority', PRIORITIES, 'medium');
 
-  let currency = text(body.currency);
-  if (currency && !/^[A-Za-z]{3}$/.test(currency)) {
-    errors.currency = 'Use a 3-letter code, like PHP.';
-  }
-  currency = currency ? currency.toUpperCase() : null;
+  const currencyCode = (key) => {
+    const c = text(body[key]);
+    if (c && !/^[A-Za-z]{3}$/.test(c)) {
+      errors[key] = 'Use a 3-letter code, like PHP.';
+      return null;
+    }
+    return c ? c.toUpperCase() : null;
+  };
+  const currency = currencyCode('currency');
 
   const money = (key) => {
     if (isBlank(body[key])) return null;
@@ -102,6 +112,18 @@ function validateCreateJob(body) {
     return v;
   };
 
+  // Closing and offer fields are only read for the stages that use them; otherwise they stay null.
+  const closing = CLOSING_STAGES.includes(status);
+  const closedReason = closing ? pick('closedReason', CLOSE_REASONS) : null;
+  const closingNote = closing ? limited('closingNote', 1000) : null;
+
+  const hasOffer = OFFER_STAGES.includes(status);
+  const offerSalary = hasOffer ? money('offerSalary') : null;
+  const offerCurrency = hasOffer ? currencyCode('offerCurrency') : null;
+  const offerPeriod = hasOffer ? pick('offerPeriod', PERIODS) : null;
+  const offerRespondBy = hasOffer ? date('offerRespondBy') : null;
+  const offerNotes = hasOffer ? limited('offerNotes', 5000) : null;
+
   const values = {
     title,
     company,
@@ -121,6 +143,13 @@ function validateCreateJob(body) {
     dateApplied: date('dateApplied'),
     deadline: date('deadline'),
     description,
+    closedReason,
+    closingNote,
+    offerSalary,
+    offerCurrency,
+    offerPeriod,
+    offerRespondBy,
+    offerNotes,
   };
 
   return { errors, values };

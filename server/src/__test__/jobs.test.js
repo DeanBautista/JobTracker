@@ -163,6 +163,177 @@ describe('POST /jobs', () => {
     expect(res.statusCode).toBe(201);
     expect(jobModel.create).toHaveBeenCalledTimes(1);
   });
+
+  describe('closing fields (rejected, withdrawn, ghosted)', () => {
+    test.each(['rejected', 'withdrawn', 'ghosted'])('passes the closing reason and note for %s', async (stage) => {
+      jobModel.create.mockResolvedValue(created);
+
+      const res = await request(app)
+        .post('/jobs')
+        .set(auth())
+        .send({ ...validBody, stage, closedReason: 'position_closed', closingNote: '  Role was filled  ' });
+
+      expect(res.statusCode).toBe(201);
+      expect(jobModel.create).toHaveBeenCalledWith(
+        147,
+        expect.objectContaining({ status: stage, closedReason: 'position_closed', closingNote: 'Role was filled' })
+      );
+    });
+
+    test('the reason and note are optional', async () => {
+      jobModel.create.mockResolvedValue(created);
+
+      const res = await request(app)
+        .post('/jobs')
+        .set(auth())
+        .send({ ...validBody, stage: 'rejected', closedReason: '', closingNote: '' });
+
+      expect(res.statusCode).toBe(201);
+      expect(jobModel.create).toHaveBeenCalledWith(
+        147,
+        expect.objectContaining({ closedReason: null, closingNote: null })
+      );
+    });
+
+    test('returns 422 for an unknown closing reason', async () => {
+      const res = await request(app)
+        .post('/jobs')
+        .set(auth())
+        .send({ ...validBody, stage: 'rejected', closedReason: 'bored' });
+
+      expect(res.statusCode).toBe(422);
+      expect(res.body.fields.closedReason).toBeDefined();
+      expect(jobModel.create).not.toHaveBeenCalled();
+    });
+
+    test('returns 422 when the closing note is too long', async () => {
+      const res = await request(app)
+        .post('/jobs')
+        .set(auth())
+        .send({ ...validBody, stage: 'ghosted', closingNote: 'x'.repeat(1001) });
+
+      expect(res.statusCode).toBe(422);
+      expect(res.body.fields.closingNote).toBeDefined();
+      expect(jobModel.create).not.toHaveBeenCalled();
+    });
+
+    test.each(['wishlist', 'applied', 'offer', 'accepted'])(
+      'ignores closing fields for %s (not a closing stage)',
+      async (stage) => {
+        jobModel.create.mockResolvedValue(created);
+
+        // "bored" would be a 422 on a closing stage, so this also proves it is not validated here.
+        const res = await request(app)
+          .post('/jobs')
+          .set(auth())
+          .send({ ...validBody, stage, closedReason: 'bored', closingNote: 'should be dropped' });
+
+        expect(res.statusCode).toBe(201);
+        expect(jobModel.create).toHaveBeenCalledWith(
+          147,
+          expect.objectContaining({ closedReason: null, closingNote: null })
+        );
+      }
+    );
+  });
+
+  describe('offer fields (offer, accepted)', () => {
+    const offerBody = {
+      offerSalary: '60000',
+      offerCurrency: 'php',
+      offerPeriod: 'month',
+      offerRespondBy: '2026-12-01',
+      offerNotes: '  13th month included  ',
+    };
+
+    test.each(['offer', 'accepted'])('passes the offer details for %s', async (stage) => {
+      jobModel.create.mockResolvedValue(created);
+
+      const res = await request(app).post('/jobs').set(auth()).send({ ...validBody, stage, ...offerBody });
+
+      expect(res.statusCode).toBe(201);
+      expect(jobModel.create).toHaveBeenCalledWith(
+        147,
+        expect.objectContaining({
+          status: stage,
+          offerSalary: 60000,
+          offerCurrency: 'PHP',
+          offerPeriod: 'month',
+          offerRespondBy: '2026-12-01',
+          offerNotes: '13th month included',
+        })
+      );
+    });
+
+    test('every offer field is optional', async () => {
+      jobModel.create.mockResolvedValue(created);
+
+      const res = await request(app)
+        .post('/jobs')
+        .set(auth())
+        .send({
+          ...validBody,
+          stage: 'offer',
+          offerSalary: '',
+          offerCurrency: '',
+          offerPeriod: '',
+          offerRespondBy: '',
+          offerNotes: '',
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(jobModel.create).toHaveBeenCalledWith(
+        147,
+        expect.objectContaining({
+          offerSalary: null,
+          offerCurrency: null,
+          offerPeriod: null,
+          offerRespondBy: null,
+          offerNotes: null,
+        })
+      );
+    });
+
+    test.each([
+      ['a negative salary', { offerSalary: '-1' }, 'offerSalary'],
+      ['a non-numeric salary', { offerSalary: 'lots' }, 'offerSalary'],
+      ['a currency that is not 3 letters', { offerCurrency: 'PH' }, 'offerCurrency'],
+      ['an unknown period', { offerPeriod: 'weekly' }, 'offerPeriod'],
+      ['an invalid reply-by date', { offerRespondBy: 'next friday' }, 'offerRespondBy'],
+      ['notes that are too long', { offerNotes: 'x'.repeat(5001) }, 'offerNotes'],
+    ])('returns 422 for %s', async (_label, extra, field) => {
+      const res = await request(app)
+        .post('/jobs')
+        .set(auth())
+        .send({ ...validBody, stage: 'offer', ...extra });
+
+      expect(res.statusCode).toBe(422);
+      expect(res.body.fields[field]).toBeDefined();
+      expect(jobModel.create).not.toHaveBeenCalled();
+    });
+
+    test.each(['wishlist', 'applied', 'rejected'])('ignores offer fields for %s (not an offer stage)', async (stage) => {
+      jobModel.create.mockResolvedValue(created);
+
+      // A negative salary would be a 422 on an offer stage, so this also proves it is not validated here.
+      const res = await request(app)
+        .post('/jobs')
+        .set(auth())
+        .send({ ...validBody, stage, ...offerBody, offerSalary: '-1' });
+
+      expect(res.statusCode).toBe(201);
+      expect(jobModel.create).toHaveBeenCalledWith(
+        147,
+        expect.objectContaining({
+          offerSalary: null,
+          offerCurrency: null,
+          offerPeriod: null,
+          offerRespondBy: null,
+          offerNotes: null,
+        })
+      );
+    });
+  });
 });
 
 describe('GET /jobs', () => {

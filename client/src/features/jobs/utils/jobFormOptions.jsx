@@ -13,6 +13,19 @@ export const STAGE_OPTIONS = [
   { value: "ghosted", label: "Ghosted" },
 ];
 
+// Stages that show extra fields in the Add job dialog.
+export const CLOSING_STAGES = ["rejected", "withdrawn", "ghosted"]; // closing reason + note
+export const OFFER_FIELD_STAGES = ["offer", "accepted"]; // offer details
+
+export const CLOSE_REASON_OPTIONS = [
+  { value: "not_enough_experience", label: "Not enough experience" },
+  { value: "position_closed", label: "Position closed" },
+  { value: "salary_mismatch", label: "Salary mismatch" },
+  { value: "took_another_offer", label: "Took another offer" },
+  { value: "no_response", label: "No response" },
+  { value: "other", label: "Other" },
+];
+
 export const WORK_MODE_OPTIONS = [
   { value: "onsite", label: "Onsite" },
   { value: "hybrid", label: "Hybrid" },
