@@ -12,8 +12,8 @@ export default function DescriptionPanel({ form }) {
           label="Job description"
           hideLabel
           maxLength={6000}
-          controlClassName="min-h-[150px]"
-          help="Keep useful requirements, responsibilities, and details from the posting."
+          controlClassName="min-h-[150px] resize-y"
+          help="Keep useful requirements, responsibilities, and details from the posting. Drag the bottom-right corner to make the box taller."
           {...form.bind("description")}
         />
       </Panel.Body>

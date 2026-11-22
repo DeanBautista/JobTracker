@@ -1,8 +1,16 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import Modal from "@/components/Modal";
 import useAddJobForm from "../../hooks/useAddJobForm";
-import { FIELD_CLASS, STAGE_OPTIONS } from "../../utils/jobFormOptions";
+import {
+  CLOSING_STAGES,
+  FIELD_CLASS,
+  OFFER_FIELD_STAGES,
+  STAGE_OPTIONS,
+} from "../../utils/jobFormOptions";
+import AddJobClosedFields from "./AddJobClosedFields";
 import AddJobMoreDetails from "./AddJobMoreDetails";
+import AddJobOfferFields from "./AddJobOfferFields";
 import JobField from "../shared/JobField";
 
 export default function AddJobDialog({ onClose, onCreated, initialStage = "wishlist" }) {
@@ -10,11 +18,18 @@ export default function AddJobDialog({ onClose, onCreated, initialStage = "wishl
     onDone: onClose,
     onCreated,
   });
+  const [stage, setStage] = useState(initialStage);
   const hasErrors = Object.keys(errors).length > 0;
 
   return (
     <Modal labelledBy="add-job-title" onClose={onClose}>
-      <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
+      {/* "Save and add another" calls form.reset(), which puts the select back to initialStage. */}
+      <form
+        onSubmit={submit}
+        onReset={() => setStage(initialStage)}
+        noValidate
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <div className="px-6 pt-[22px] max-sm:px-4">
           <h2 id="add-job-title" className="font-serif text-2xl leading-tight font-medium tracking-[-0.01em]">
             Add job
@@ -68,7 +83,13 @@ export default function AddJobDialog({ onClose, onCreated, initialStage = "wishl
 
             <JobField label="Stage">
               {(p) => (
-                <select {...p} name="stage" defaultValue={initialStage} className={FIELD_CLASS}>
+                <select
+                  {...p}
+                  name="stage"
+                  defaultValue={initialStage}
+                  onChange={(e) => setStage(e.target.value)}
+                  className={FIELD_CLASS}
+                >
                   {STAGE_OPTIONS.map(({ value, label }) => (
                     <option key={value} value={value}>{label}</option>
                   ))}
@@ -118,6 +139,10 @@ export default function AddJobDialog({ onClose, onCreated, initialStage = "wishl
               )}
             </div>
           </div>
+
+          {/* Unmounted inputs are not part of FormData, so values from a stage you switched away from are never sent. */}
+          {OFFER_FIELD_STAGES.includes(stage) && <AddJobOfferFields errors={errors} />}
+          {CLOSING_STAGES.includes(stage) && <AddJobClosedFields errors={errors} />}
 
           <AddJobMoreDetails errors={errors} />
         </div>

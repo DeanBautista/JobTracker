@@ -154,6 +154,8 @@ async function create(userId, v) {
       .max({ maxPos: 'board_position' })
       .first();
 
+    const isClosed = CLOSED_STATUSES.includes(v.status);   // <-- 1) ADD THIS LINE
+
     const [applicationId] = await trx('applications').insert({
       user_id: userId,
       company_id: company.id,
@@ -176,6 +178,16 @@ async function create(userId, v) {
       priority: v.priority,
       board_position: (maxPos ?? -1) + 1,
       description: v.description,
+
+      // 2) ADD THESE LINES (after `description`)
+      closed_reason: v.closedReason ?? null,
+      closing_note: v.closingNote ?? null,
+      closed_at: isClosed ? knex.fn.now() : null,
+      offer_salary: v.offerSalary ?? null,
+      offer_currency: v.offerCurrency ?? null,
+      offer_period: v.offerPeriod ?? null,
+      offer_respond_by: v.offerRespondBy ?? null,
+      offer_notes: v.offerNotes ?? null,
     });
 
     await trx('status_history').insert({
