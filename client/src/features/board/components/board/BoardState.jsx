@@ -15,7 +15,7 @@ export default function BoardState({ variant, onClear, onAdd, onRetry }) {
       <h2 className="font-serif text-[1.7rem] leading-[1.15] font-normal tracking-[-0.015em]">{title}</h2>
       <p className="mx-auto mt-3 mb-6 max-w-[46ch] text-muted">{body}</p>
       {variant === "none" && <button type="button" className="btn" onClick={onClear}>Clear filters</button>}
-      {variant === "empty" && <button type="button" className="btn btn-primary" onClick={onAdd}>Add job</button>}
+      {variant === "empty" && <button type="button" className="btn btn-primary" onClick={onAdd}>Add your first job</button>}
       {variant === "error" && <button type="button" className="btn btn-primary" onClick={onRetry}>Try again</button>}
     </section>
   );

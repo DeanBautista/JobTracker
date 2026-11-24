@@ -8,6 +8,7 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 const jobsRouter = require('./routes/jobs');
 const oauthRouter = require('./routes/oauth');
 const demoRouter = require('./routes/demo');
+const dashboardRouter = require('./routes/dashboard');
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.get('/health', async (req, res) => {
   }
 });
 
+app.use('/dashboard', dashboardRouter);
 app.use('/users', usersRouter);
 app.use('/auth', authRouter);
 app.use('/auth', oauthRouter);

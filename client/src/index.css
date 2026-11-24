@@ -126,6 +126,10 @@
     width: min(100% - 2 * var(--spacing-page), var(--container-page));
   }
 
+  .card {
+    @apply min-w-0 rounded-lg border border-rule bg-surface p-5;
+  }
+
   textarea.field {
     @apply py-2.5 leading-normal;
   }

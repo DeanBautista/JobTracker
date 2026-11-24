@@ -96,6 +96,14 @@ jest.mock('./utils/mailer', () => ({
   sendPasswordResetEmail: jest.fn(),
 }));
 
+jest.mock('./models/dashboardModel', () => ({
+  funnel: jest.fn(),
+  weekly: jest.fn(),
+  breakdown: jest.fn(),
+  stats: jest.fn(),
+  hasJobs: jest.fn(),
+}));
+
 // Clears calls AND implementations, so each test sets up exactly what it needs.
 afterEach(() => {
   jest.resetAllMocks();
