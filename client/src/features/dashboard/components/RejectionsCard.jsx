@@ -24,13 +24,17 @@ export default function RejectionsCard({ reasons, topStage, status, onRetry, cla
         ) : (
           <>
             <ul>
-              {reasons.map((reason) => (
+              {reasons.map((reason, i) => (
                 <li
                   key={reason.key}
                   className="grid grid-cols-[96px_minmax(0,1fr)_22px] items-center gap-2.5 py-1.5 text-sm sm:grid-cols-[112px_minmax(0,1fr)_24px]"
                 >
                   <span>{REASON_LABELS[reason.key] ?? reason.key}</span>
-                  <BarTrack percent={(reason.count / max) * 100} className="h-3" />
+                  <BarTrack
+                    percent={(reason.count / max) * 100}
+                    delay={i * 60}
+                    className="h-3"
+                  />
                   <span className="text-right font-mono text-[13px] leading-none font-medium">
                     {reason.count}
                   </span>

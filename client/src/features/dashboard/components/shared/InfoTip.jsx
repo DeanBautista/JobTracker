@@ -11,7 +11,7 @@ export default function InfoTip({ label, children }) {
       </button>
       <span
         role="tooltip"
-        className="absolute top-7 -right-1 z-15 hidden w-55 rounded-md bg-ink px-2.75 py-2.25 text-left font-sans text-[12.5px] leading-[1.45] font-normal tracking-normal text-on-ink normal-case group-focus-within:block group-hover:block"
+        className="absolute top-7 -right-1 z-15 hidden w-55 animate-pop rounded-md bg-ink px-2.75 py-2.25 text-left font-sans text-[12.5px] leading-[1.45] font-normal tracking-normal text-on-ink normal-case group-focus-within:block group-hover:block"
       >
         {children}
       </span>

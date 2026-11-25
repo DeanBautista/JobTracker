@@ -130,7 +130,7 @@
   }
 
   .card {
-    @apply min-w-0 rounded-lg border border-rule bg-surface p-5;
+    @apply min-w-0 animate-rise rounded-lg border border-rule bg-surface p-5;
   }
 
   textarea.field {

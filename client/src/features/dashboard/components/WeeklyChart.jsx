@@ -63,14 +63,14 @@ export default function WeeklyChart({ counts, goal, status, onRetry, className }
           return (
             <div key={i} className="group relative flex h-full flex-1 items-end">
               <span
-                className={`block w-full rounded-t-[3px] border border-b-0 border-accent group-hover:border-ink group-hover:bg-ink ${
+                className={`block w-full origin-bottom animate-grow-y rounded-t-[3px] border border-b-0 border-accent group-hover:border-ink group-hover:bg-ink ${
                   count >= goal ? "bg-accent" : "bg-accent-soft"
                 }`}
-                style={{ height: `${height}%` }}
+                style={{ height: `${height}%`, animationDelay: `${i * 50}ms` }}
               />
               <span
                 role="tooltip"
-                className="pointer-events-none absolute left-1/2 z-20 hidden -translate-x-1/2 rounded-md bg-ink px-2.5 py-1.5 text-center font-sans text-[12px] leading-[1.35] whitespace-nowrap text-on-ink group-hover:block"
+                className="pointer-events-none absolute left-1/2 z-20 hidden -translate-x-1/2 animate-pop rounded-md bg-ink px-2.5 py-1.5 text-center font-sans text-[12px] leading-[1.35] whitespace-nowrap text-on-ink group-hover:block"
                 style={{ bottom: `calc(${height}% + 6px)` }}
               >
                 <b className="block font-medium">
