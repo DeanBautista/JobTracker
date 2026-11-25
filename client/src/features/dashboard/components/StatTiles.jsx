@@ -15,8 +15,13 @@ export default function StatTiles({ stats, status, range, onRetry }) {
 
   return (
     <div className="mb-4 grid grid-cols-2 gap-4 xl:grid-cols-4">
-      {buildTiles(stats, range).map((tile) => (
-        <section key={tile.id} className="card px-5 py-4.5 max-sm:p-3.5" aria-label={tile.label}>
+      {buildTiles(stats, range).map((tile, i) => (
+        <section
+          key={tile.id}
+          className="card px-5 py-4.5 max-sm:p-3.5"
+          style={{ animationDelay: `${i * 40}ms` }}
+          aria-label={tile.label}
+        >
           <div className="flex items-center justify-between text-[13.5px] text-muted">
             {tile.label}
             <InfoTip label={tile.label}>{tile.hint}</InfoTip>

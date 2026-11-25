@@ -2,6 +2,7 @@
   --animate-rise: rise 200ms ease-out both;
   --animate-pop: pop 150ms ease-out both;
   --animate-grow: grow 400ms ease-out both;
+  --animate-grow-y: grow-y 400ms ease-out both;
 
   @keyframes rise {
     from { opacity: 0; transform: translateY(6px); }
@@ -16,6 +17,11 @@
   @keyframes grow {
     from { transform: scaleX(0); }
     to   { transform: scaleX(1); }
+  }
+
+  @keyframes grow-y {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
   }
 }
 
