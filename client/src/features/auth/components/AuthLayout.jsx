@@ -33,7 +33,7 @@ export default function AuthLayout({ story, storyNote, topAction, children }) {
             id="main"
             className="flex min-h-0 flex-1 flex-col overflow-y-auto px-gutter pb-8 pt-9 min-[900px]:pt-8"
           >
-            <div className="mx-auto w-full max-w-[400px] min-[900px]:my-auto">
+            <div className="mx-auto w-full max-w-[400px] animate-rise min-[900px]:my-auto">
               {children}
             </div>
           </main>

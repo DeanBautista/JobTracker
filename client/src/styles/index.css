@@ -1,5 +1,6 @@
 @import "tailwindcss";
-@import "./styles/motion.css";
+@import "./motion.css";
+@import "./animations.css";
 
 @theme {
   /* ---------- Colors (light mode) ---------- */
@@ -17,6 +18,7 @@
 
   --color-danger: #a23b24;
   --color-danger-soft: #f3dcd4;
+  --color-danger-on-ink: #e08a6f;
 
   --color-info: #3d5373;
   --color-info-soft: #e3e8f0;
