@@ -1,17 +1,18 @@
 import Section from "@/features/landing/components/shared/Section";
 import SectionIntro from "@/features/landing/components/shared/SectionIntro";
 import { DASHBOARD } from "@/features/landing/data/landingContent";
+import Reveal from "@/components/Reveal";
 
 const { tiles, funnel, goal, results } = DASHBOARD;
 
 function Card({ title, className = "", children }) {
   return (
-    <div className={`rounded-md border border-rule bg-surface p-4 ${className}`}>
+    <Reveal className={`rounded-md border border-rule bg-surface p-4 ${className}`}>
       <h3 className="mb-3.5 font-mono text-xs leading-none font-medium tracking-[0.06em] text-muted uppercase">
         {title}
       </h3>
       {children}
-    </div>
+    </Reveal>
   );
 }
 
@@ -41,11 +42,11 @@ export default function DashboardPreview() {
 
         <div aria-hidden="true" className="grid gap-4 bg-tint p-[18px]">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            {tiles.map(({ value, label }) => (
-              <div key={label} className="rounded-md border border-rule bg-surface px-4 py-3.5">
+            {tiles.map(({ value, label }, i) => (
+              <Reveal key={label} index={i} className="rounded-md border border-rule bg-surface px-4 py-3.5">
                 <span className="block font-serif text-[34px] leading-none tracking-[-0.02em]">{value}</span>
                 <span className="mt-1.5 block text-[13px] text-muted">{label}</span>
-              </div>
+              </Reveal>
             ))}
           </div>
 
@@ -59,7 +60,7 @@ export default function DashboardPreview() {
                   >
                     <span>{label}</span>
                     <span className="h-[18px] overflow-hidden rounded-[3px] bg-tint">
-                      <span style={{ width: `${percent}%` }} className="block h-full rounded-[3px] bg-accent" />
+                      <span style={{ width: `${percent}%` }} className="bar-x block h-full rounded-[3px] bg-accent" />
                     </span>
                     <b className="text-right font-mono text-[13px] font-medium">{value}</b>
                   </li>
@@ -72,7 +73,7 @@ export default function DashboardPreview() {
                 {goal.done} of {goal.target}
               </b>
               <div className="mt-3 mb-2 h-2 overflow-hidden rounded-[4px] bg-tint">
-                <span style={{ width: `${(goal.done / goal.target) * 100}%` }} className="block h-full bg-accent" />
+                <span style={{ width: `${(goal.done / goal.target) * 100}%` }} className="bar-x block h-full bg-accent" />
               </div>
               <p className="text-[13.5px] text-muted">One more application to reach this week’s goal.</p>
             </Card>

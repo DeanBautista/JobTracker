@@ -1,4 +1,5 @@
 import cx from "@/lib/cx";
+import Reveal from "@/components/Reveal";
 import { BOARD_COLUMNS } from "@/features/landing/data/landingContent";
 
 const DOT_COLOR = {
@@ -29,32 +30,34 @@ function JobCard({ title, company, meta, priority, lifted }) {
 
 export default function BoardPreview() {
   return (
-    <figure aria-label="Illustration of the job board">
-      <div aria-hidden="true" className="overflow-hidden rounded-[10px] border border-ink bg-surface">
-        <div className="flex items-center justify-between border-b border-rule px-3.5 py-2.5 font-mono text-xs leading-none font-medium text-muted">
-          <span className="inline-flex gap-[5px]">
-            {[0, 1, 2].map((i) => (
-              <span key={i} className="size-2 rounded-full border border-rule" />
-            ))}
-          </span>
-          <span>Board</span>
-          <span>4 of 9 stages</span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2.5 bg-tint p-3.5 sm:grid-cols-4">
-          {BOARD_COLUMNS.map(({ stage, jobs }) => (
-            <div key={stage} className="max-sm:nth-[n+3]:hidden">
-              <h3 className="mb-2 flex justify-between font-mono text-[11px] leading-none font-medium tracking-[0.06em] text-muted uppercase">
-                {stage} <span className="text-ink">{jobs.length}</span>
-              </h3>
-              {jobs.map((job) => (
-                <JobCard key={job.title} {...job} />
+    <Reveal as="figure" index={2} aria-label="Illustration of the job board">
+      <figure aria-label="Illustration of the job board">
+        <div aria-hidden="true" className="overflow-hidden rounded-[10px] border border-ink bg-surface">
+          <div className="flex items-center justify-between border-b border-rule px-3.5 py-2.5 font-mono text-xs leading-none font-medium text-muted">
+            <span className="inline-flex gap-[5px]">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="size-2 rounded-full border border-rule" />
               ))}
-            </div>
-          ))}
+            </span>
+            <span>Board</span>
+            <span>4 of 9 stages</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5 bg-tint p-3.5 sm:grid-cols-4">
+            {BOARD_COLUMNS.map(({ stage, jobs }) => (
+              <div key={stage} className="max-sm:nth-[n+3]:hidden">
+                <h3 className="mb-2 flex justify-between font-mono text-[11px] leading-none font-medium tracking-[0.06em] text-muted uppercase">
+                  {stage} <span className="text-ink">{jobs.length}</span>
+                </h3>
+                {jobs.map((job) => (
+                  <JobCard key={job.title} {...job} />
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-      <figcaption className="label mt-3">Sample data, not real companies</figcaption>
-    </figure>
+        <figcaption className="label mt-3">Sample data, not real companies</figcaption>
+      </figure>
+    </Reveal>
   );
 }
