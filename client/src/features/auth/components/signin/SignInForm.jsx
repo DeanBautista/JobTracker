@@ -142,7 +142,7 @@ export default function SignInForm({ status, onStatusChange }) {
       </Button>
 
       {formError && (
-        <p role="alert" className="mt-3 text-[13.5px] text-red-600">
+        <p role="alert" className="mt-3 animate-pop text-[13.5px] text-red-600">
           {formError}
         </p>
       )}

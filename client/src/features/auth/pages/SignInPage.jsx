@@ -33,12 +33,16 @@ export default function SignInPage() {
       />
 
       {oauthError && (
-        <p role="alert" className="mb-4 text-sm text-red-600">
+        <p role="alert" className="mb-4 animate-pop text-sm text-red-600">
           {oauthError}
         </p>
       )}
-      
-      <SignInStatus status={status} />
+
+      {status && (
+        <div key={status} className="animate-pop">
+          <SignInStatus status={status} />
+        </div>
+      )}
       <SignInForm status={status} onStatusChange={setStatus} />
 
       <OrDivider />
