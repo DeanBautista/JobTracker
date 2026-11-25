@@ -1,6 +1,7 @@
 import { DocumentRows, ScheduleRows, StageTrack, WeeklySpark } from "./FeaturePanels";
 import Section from "@/features/landing/components/shared/Section";
 import SectionIntro from "@/features/landing/components/shared/SectionIntro";
+import Reveal from "@/components/Reveal";
 
 const FEATURES = [
   {
@@ -36,7 +37,8 @@ export default function FeaturesSection() {
       />
 
       {FEATURES.map(({ title, text, Panel }, i) => (
-        <article
+        <Reveal 
+          as="article"
           key={title}
           className="grid items-center gap-[clamp(24px,5vw,72px)] border-t border-rule py-9 last:border-b md:grid-cols-[minmax(0,4fr)_minmax(0,5fr)]"
         >
@@ -48,7 +50,7 @@ export default function FeaturesSection() {
             <p className="mt-2.5 max-w-[46ch] text-muted">{text}</p>
           </div>
           <Panel />
-        </article>
+        </Reveal>
       ))}
     </Section>
   );

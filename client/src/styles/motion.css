@@ -1,0 +1,33 @@
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+}
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+}
+@keyframes grow-y {
+  from { transform: scaleY(0); }
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+/* Cards, tiles, rows: hidden until Reveal marks them "in" */
+[data-reveal="out"] { opacity: 0; transform: translateY(6px); }
+[data-reveal="in"]  { animation: rise 200ms ease-out backwards; }
+
+/* Bars grow once their revealed ancestor appears */
+.bar-x { transform-origin: left; }
+.bar-y { transform-origin: bottom; }
+[data-reveal="in"] .bar-x { animation: grow-x 400ms ease-out 100ms backwards; }
+[data-reveal="in"] .bar-y { animation: grow-y 400ms ease-out 100ms backwards; }
+
+/* Toasts and dialogs (reuse on any page) */
+.enter-slide { animation: slide-in 150ms ease-out backwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal="out"] { opacity: 1; transform: none; }
+  [data-reveal="in"],
+  [data-reveal="in"] .bar-x,
+  [data-reveal="in"] .bar-y,
+  .enter-slide { animation: none; }
+}

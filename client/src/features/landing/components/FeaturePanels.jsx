@@ -76,7 +76,7 @@ export function WeeklySpark() {
           <span
             key={i}
             style={{ height: `${height}%` }}
-            className="block flex-1 rounded-t-[3px] border border-b-0 border-accent bg-accent-soft"
+            className="bar-y block flex-1 rounded-t-[3px] border border-b-0 border-accent bg-accent-soft"
           />
         ))}
       </div>
