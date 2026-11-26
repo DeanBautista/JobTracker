@@ -8,7 +8,7 @@ const app = require('../app');
 jest.mock('../db/demoSeed', () => ({ resetDemoData: jest.fn() }));
 
 describe('POST /demo/reset', () => {
-  const auth = (id) => ({ Authorization: `Bearer ${signAccessToken(id)}` });
+  const auth = (id) => ({ Authorization: `Bearer ${signAccessToken(id, 1)}` });
 
   test('returns 401 without a token', async () => {
     const res = await request(app).post('/demo/reset');

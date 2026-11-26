@@ -52,7 +52,12 @@ jest.mock('./models/sessionModel', () => ({
   findByHash: jest.fn(),
   rotate: jest.fn(),
   revoke: jest.fn(),
+  isActive: jest.fn(),
 }));
+
+beforeEach(() => {
+  require('./models/sessionModel').isActive.mockResolvedValue(true);
+});
 
 jest.mock('./models/jobModel', () => ({
   create: jest.fn(),

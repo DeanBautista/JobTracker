@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { refreshSession, setAccessToken, setAuthFailureHandler } from "@/lib/api";
+import { authChannel, broadcastAuth } from "@/lib/authChannel";
 import * as authApi from "../api/authApi";
 import { AuthContext } from "./AuthContext";
 
@@ -32,6 +33,22 @@ export default function AuthProvider({ children }) {
     };
   }, []);
 
+  // Log this tab out when another tab logs out.
+  useEffect(() => {
+    if (!authChannel) return;
+
+    const onMessage = (e) => {
+      if (e.data?.type === "logout") {
+        setAccessToken(null);
+        setUser(null);
+        setStatus("unauthenticated");
+      }
+    };
+
+    authChannel.addEventListener("message", onMessage);
+    return () => authChannel.removeEventListener("message", onMessage);
+  }, []);
+
   const login = useCallback(async (credentials) => {
     const { accessToken, user } = await authApi.login(credentials);
     setAccessToken(accessToken);
@@ -56,6 +73,7 @@ export default function AuthProvider({ children }) {
       setAccessToken(null);
       setUser(null);
       setStatus("unauthenticated");
+      broadcastAuth("logout");
     }
   }, []);
 
@@ -68,7 +86,7 @@ export default function AuthProvider({ children }) {
   }, []);
 
   const completeOnboarding = useCallback(async () => {
-  const user = await authApi.completeOnboarding();
+    const user = await authApi.completeOnboarding();
     setUser(user); // onboarded_at is now set, so the guards let them through
     return user;
   }, []);
@@ -77,7 +95,6 @@ export default function AuthProvider({ children }) {
     () => ({ user, status, login, demoLogin, logout, verifyEmail, completeOnboarding }),
     [user, status, login, demoLogin, logout, verifyEmail, completeOnboarding]
   );
-  
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -34,14 +34,14 @@ const setRefreshCookie = (res, token) =>
 
 async function startSession(req, res, userId) {
   const refreshToken = generateRefreshToken();
-  await sessionModel.create({
+  const sessionId = await sessionModel.create({
     userId,
     tokenHash: hashToken(refreshToken),
     expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
     deviceLabel: (req.get('user-agent') || '').slice(0, 120),
   });
   setRefreshCookie(res, refreshToken);
-  return signAccessToken(userId);
+  return signAccessToken(userId, sessionId);
 }
 
 // POST /auth/login
@@ -99,7 +99,7 @@ const refresh = async (req, res) => {
   if (!rotated) throw AppError.unauthorized('invalid_refresh_token'); // lost a race
 
   setRefreshCookie(res, newToken);
-  res.json({ accessToken: signAccessToken(user.id), user });
+  res.json({ accessToken: signAccessToken(user.id, session.id), user });
 };
 
 // POST /auth/logout
