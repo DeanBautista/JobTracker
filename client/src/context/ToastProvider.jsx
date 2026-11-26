@@ -30,7 +30,7 @@ export default function ToastProvider({ children }) {
       {children}
       <div role="status" aria-live="polite">
         {toast && (
-          <div className="fixed right-3 bottom-[68px] left-3 z-[60] flex flex-wrap items-center justify-between gap-3.5 rounded-lg border border-ink bg-surface px-3.5 py-3 text-sm shadow-[0_12px_30px_rgb(0_0_0/0.16)] sm:right-6 sm:bottom-6 sm:left-auto sm:max-w-[calc(100vw-32px)] sm:justify-start">
+          <div key={toast.id} className="animate-pop fixed right-3 bottom-[68px] left-3 z-[60] flex flex-wrap items-center justify-between gap-3.5 rounded-lg border border-ink bg-surface px-3.5 py-3 text-sm shadow-[0_12px_30px_rgb(0_0_0/0.16)] sm:right-6 sm:bottom-6 sm:left-auto sm:max-w-[calc(100vw-32px)] sm:justify-start">
             <span>{toast.message}</span>
             {toast.action && (
               <button

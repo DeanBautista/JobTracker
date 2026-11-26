@@ -35,7 +35,7 @@ function Dialog({ labelledBy, title, description, size, onClose, children }) {
       ref={ref}
       aria-labelledby={titleId}
       onClose={onClose}
-      className={`m-auto w-[calc(100%-2rem)] ${width} max-h-[calc(100dvh-2.5rem)] flex-col overflow-hidden rounded-[10px] border border-ink bg-surface p-0 text-ink open:flex backdrop:bg-black/45 max-sm:m-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:border-0`}
+      className={`m-auto w-[calc(100%-2rem)] ${width} max-h-[calc(100dvh-2.5rem)] flex-col overflow-hidden open:animate-pop rounded-[10px] border border-ink bg-surface p-0 text-ink open:flex backdrop:bg-black/45 max-sm:m-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:border-0`}
     >
       {title && (
         <div className="border-b border-rule px-5 py-4">
