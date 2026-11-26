@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import useIntro from "@/hooks/useIntro";
 import useToast from "@/hooks/useToast";
 import useJobOrigin from "../../hooks/useJobOrigin";
 import { CLOSED_STAGES, OFFER_STAGES } from "../../utils/detailOptions";
@@ -13,6 +14,7 @@ import PayPanel from "./PayPanel";
 
 export default function OverviewTab({ job, form, readOnly, onSave, onTabChange }) {
   const { stage } = form.values;
+  const intro = useIntro(true);
   const { show } = useToast();
   const origin = useJobOrigin();
 
@@ -27,7 +29,13 @@ export default function OverviewTab({ job, form, readOnly, onSave, onTabChange }
   };
 
   return (
-    <form onSubmit={form.submit(handleSave)} noValidate aria-label="Job overview">
+    <form
+      onSubmit={form.submit(handleSave)}
+      noValidate
+      aria-label="Job overview"
+      data-intro={intro ? "true" : "false"}
+      className="group/tab"
+    >
       {form.showSummary && (
         <div role="alert" className="mb-[18px] rounded-[7px] border border-danger bg-danger-soft px-3.5 py-2.5 text-meta text-danger">
           Please fix the highlighted fields before saving.

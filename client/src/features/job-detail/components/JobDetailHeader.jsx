@@ -27,7 +27,7 @@ export default function JobDetailHeader({
   const closed = CLOSED_STAGES.includes(values.stage);
 
   return (
-    <header className="border-b border-rule pb-5">
+    <header className="animate-rise border-b border-rule pb-5">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1">
           {readOnly ? (
