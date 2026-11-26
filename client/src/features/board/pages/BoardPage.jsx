@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAddJob } from "@/features/jobs";
 import CloseReasonDialog from "@/features/jobs/components/shared/CloseReasonDialog";
+import useBootDone from "@/hooks/useBootDone";
 import Board from "../components/board/Board";
 import BoardActiveFilters from "../components/board/BoardActiveFilters";
 import BoardFilters from "../components/board/BoardFilters";
@@ -17,6 +18,14 @@ export default function BoardPage() {
   const { openAddJob } = useAddJob();
   const { filters, activeFilters, preview, applyFilters, clearFilters, removeFilter } = useBoardFilters();
   const { status, jobs, retry, moveJob, archive, remove } = useBoardJobs({ preview });
+  const bootDone = useBootDone();
+  const [intro, setIntro] = useState(true);
+
+  useEffect(() => {
+    if (status !== "success" || !bootDone) return;
+    const t = setTimeout(() => setIntro(false), 800); // 6 × 40ms stagger + 200ms rise, with headroom
+    return () => clearTimeout(t);
+  }, [status, bootDone]);
 
   // Everything below is derived from state, so counts stay right after a drop.
   const visibleJobs = useMemo(() => filterJobs(jobs, filters), [jobs, filters]);
@@ -70,6 +79,7 @@ export default function BoardPage() {
         <Board
           groups={groups}
           jobs={visibleJobs}
+          intro={intro}
           onMove={handleMove}
           onAddJob={addJob}
           onArchive={archive}

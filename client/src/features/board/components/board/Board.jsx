@@ -97,7 +97,7 @@ const screenReaderInstructions = {
 // Lives inside <DndContext> so it can read the live drag state with useDndContext().
 // (onDragMove's `over` lags one movement behind, which made the drop line show up one column
 // early. The context is up to date on every render, so the target is derived here instead.)
-function BoardSurface({ groups, jobs, onMove, onAddJob, onArchive, onDelete }) {
+function BoardSurface({ groups, jobs, intro, onMove, onAddJob, onArchive, onDelete }) {
   const { active, over } = useDndContext();
 
   const activeJob = active ? jobs.find((j) => j.id === active.id) : null;
@@ -111,7 +111,8 @@ function BoardSurface({ groups, jobs, onMove, onAddJob, onArchive, onDelete }) {
         aria-label="Job stages board"
         tabIndex={0}
         data-dragging={activeJob ? "true" : "false"}
-        className="w-full snap-x snap-proximity overflow-x-auto overflow-y-hidden overscroll-x-contain px-0.5 pt-0.5 pb-4 [scrollbar-color:var(--color-rule)_transparent] [scrollbar-width:thin] data-[dragging=true]:snap-none data-[dragging=true]:select-none"
+        data-intro={intro ? "true" : "false"}
+        className="group/board w-full snap-x snap-proximity overflow-x-auto overflow-y-hidden overscroll-x-contain px-0.5 pt-0.5 pb-4 [scrollbar-color:var(--color-rule)_transparent] [scrollbar-width:thin] data-[dragging=true]:snap-none data-[dragging=true]:select-none"
       >
         <div className="flex min-h-[300px] w-max items-stretch gap-3 max-sm:gap-2.5">
           {OPEN_STAGES.map((s) => (
@@ -151,7 +152,7 @@ function BoardSurface({ groups, jobs, onMove, onAddJob, onArchive, onDelete }) {
  * groups: { [stage]: Job[] } already filtered and ordered by position.
  * onMove(jobId, stage, { beforeId }) is the single entry point for every kind of move.
  */
-export default function Board({ groups, jobs, onMove, onAddJob, onArchive, onDelete }) {
+export default function Board({ groups, jobs, intro = false, onMove, onAddJob, onArchive, onDelete }) {
   const sensors = useSensors(
     // Mouse: a short click still opens the card; the drag starts after 8px of movement.
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -177,6 +178,7 @@ export default function Board({ groups, jobs, onMove, onAddJob, onArchive, onDel
       <BoardSurface
         groups={groups}
         jobs={jobs}
+        intro={intro}
         onMove={onMove}
         onAddJob={onAddJob}
         onArchive={onArchive}
