@@ -4,8 +4,8 @@ const crypto = require('crypto');
 const ACCESS_TTL = '15m';
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-const signAccessToken = (userId) =>
-  jwt.sign({ sub: String(userId) }, process.env.ACCESS_TOKEN_SECRET, {
+const signAccessToken = (userId, sessionId) =>
+  jwt.sign({ sub: String(userId), sid: sessionId }, process.env.ACCESS_TOKEN_SECRET, {
     expiresIn: ACCESS_TTL,
     algorithm: 'HS256',
   });

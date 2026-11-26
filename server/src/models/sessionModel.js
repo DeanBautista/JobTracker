@@ -1,13 +1,24 @@
 const knex = require('../db/knex');
 
-const create = ({ userId, tokenHash, expiresAt, deviceLabel }) =>
-  knex('sessions').insert({
+const create = async ({ userId, tokenHash, expiresAt, deviceLabel }) => {
+  const [id] = await knex('sessions').insert({
     user_id: userId,
     refresh_token_hash: tokenHash,
     device_label: deviceLabel || null,
     last_used_at: knex.fn.now(),
     expires_at: expiresAt,
   });
+  return id; // MySQL: knex returns [insertId]
+};
+
+const isActive = async (id, userId) => {
+  const row = await knex('sessions')
+    .where({ id, user_id: userId })
+    .whereNull('revoked_at')
+    .where('expires_at', '>', knex.fn.now())
+    .first('id');
+  return Boolean(row);
+};
 
 const findByHash = (hash) =>
   knex('sessions').where({ refresh_token_hash: hash }).first();
@@ -30,4 +41,4 @@ const revoke = (id) =>
     .whereNull('revoked_at')
     .update({ revoked_at: knex.fn.now() });
 
-module.exports = { create, findByHash, rotate, revoke };
+module.exports = { create, findByHash, rotate, revoke, isActive };

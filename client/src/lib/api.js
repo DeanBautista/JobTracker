@@ -48,6 +48,8 @@ export function refreshSession() {
         response = await requestRefresh();
       }
       accessToken = response.data.accessToken;
+      const { exp } = JSON.parse(atob(accessToken.split(".")[1]));
+      console.log("[auth] token refreshed, expires at", new Date(exp * 1000).toLocaleTimeString());
       return response.data;
     } finally {
       refreshPromise = null;
