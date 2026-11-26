@@ -6,7 +6,7 @@ import { formatDate } from "../utils/format";
 const cell = "col-start-2 block tbl:table-cell tbl:border-t tbl:border-rule tbl:px-2.5 tbl:py-3 tbl:align-middle";
 const meta = "font-mono text-[13px] text-muted";
 
-export default function TrashRow({ job, view, selected, onToggle, actions, onPurge }) {
+export default function TrashRow({ job, index = 0, intro = false, view, selected, onToggle, actions, onPurge }) {
   const location = useLocation();
   const from = `${location.pathname}${location.search}`; // e.g. /trash?view=trash&page=2
   const isTrash = view === "trash";
@@ -14,9 +14,8 @@ export default function TrashRow({ job, view, selected, onToggle, actions, onPur
 
   return (
     <tr
-      className={`mb-2.5 grid grid-cols-[34px_minmax(0,1fr)] gap-x-2 gap-y-1.5 rounded-lg border border-rule p-3.5 tbl:mb-0 tbl:table-row tbl:rounded-none tbl:border-0 tbl:p-0 ${
-        selected ? "bg-accent-soft" : "bg-surface tbl:bg-transparent"
-      }`}
+      style={intro ? { animationDelay: `${Math.min(index, 5) * 40}ms` } : undefined}
+      className={`${intro ? "animate-rise " : ""}...existing classes...`}
     >
       <td
         className={`block ${isTrash ? "row-span-5" : "row-span-4"} pt-0.5 tbl:table-cell tbl:w-11 tbl:border-t tbl:border-rule tbl:py-3 tbl:pr-0 tbl:pl-2.5 tbl:align-middle`}

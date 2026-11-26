@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import useIntro from "@/hooks/useIntro";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import JobsFooter from "@/features/jobs/components/list/JobsFooter";
 import JobsSkeleton from "@/features/jobs/components/list/JobsSkeleton";
@@ -28,6 +29,7 @@ export default function TrashPage() {
   const [confirm, setConfirm] = useState(null); // { ids } waiting for delete forever
 
   const { status, jobs, total, counts, retry } = useTrashList({ view, page, size });
+  const intro = useIntro(status === "success");
   const selection = useJobSelection(jobs);
   const actions = useTrashActions({ clearSelection: selection.clear });
 
@@ -80,6 +82,7 @@ export default function TrashPage() {
           <TrashTable
             view={view}
             jobs={jobs}
+            intro={intro}
             selection={selection}
             actions={actions}
             onPurge={(ids) => setConfirm({ ids })}
