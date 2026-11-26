@@ -7,7 +7,14 @@ const TONES = { default: "border-rule", danger: "border-danger/50" };
 // background that reaches the rounded corners.
 export default function Panel({ as: Tag = "section", tone = "default", className, children, ...rest }) {
   return (
-    <Tag className={cx("min-w-0 rounded-lg border bg-surface", TONES[tone], className)} {...rest}>
+    <Tag
+      className={cx(
+        "min-w-0 rounded-lg border bg-surface group-data-[intro=true]/tab:animate-rise",
+        TONES[tone],
+        className,
+      )}
+      {...rest}
+    >
       {children}
     </Tag>
   );

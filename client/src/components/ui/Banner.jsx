@@ -10,7 +10,7 @@ export default function Banner({ tone = "default", action, children }) {
   return (
     <div
       className={cx(
-        "mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 text-meta",
+        "animate-rise mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 text-meta",
         TONES[tone],
       )}
     >
