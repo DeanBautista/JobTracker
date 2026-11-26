@@ -17,7 +17,7 @@ export default function TrashEmpty({ view }) {
   return (
     <section
       aria-labelledby="trash-empty-title"
-      className="rounded-lg border border-dashed border-muted bg-surface px-6 py-14 text-center"
+      className="animate-rise rounded-lg border border-dashed border-muted bg-surface px-6 py-14 text-center"
     >
       <h2 id="trash-empty-title" className="font-serif text-[1.7rem] leading-[1.15] font-normal tracking-[-0.015em]">
         {title}

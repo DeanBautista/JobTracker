@@ -24,12 +24,14 @@ function buildMeta(job) {
   return parts.filter(Boolean).join(" · ");
 }
 
-export default function JobRow({ job, visible, selected, onToggle, menuOpensUp, actions }) {
+export default function JobRow({ job, index = 0, intro = false, visible, selected, onToggle, menuOpensUp, actions }) {
   const location = useLocation();
   const from = `${location.pathname}${location.search}`; // e.g. /jobs?page=2&stage=applied
+  const animate = intro;
   return (
     <tr
-      className={`mb-2.5 grid grid-cols-[34px_minmax(0,1fr)_44px] gap-x-2 gap-y-1 rounded-lg border border-rule py-3.5 pr-2 pl-3.5 tbl:mb-0 tbl:table-row tbl:rounded-none tbl:border-x-0 tbl:border-t-0 tbl:p-0 tbl:last:border-b-0 ${
+      style={animate ? { animationDelay: `${Math.min(index, 5) * 40}ms` } : undefined}
+      className={`${animate ? "animate-rise " : ""} mb-2.5 grid grid-cols-[34px_minmax(0,1fr)_44px] gap-x-2 gap-y-1 rounded-lg border border-rule py-3.5 pr-2 pl-3.5 tbl:mb-0 tbl:table-row tbl:rounded-none tbl:border-x-0 tbl:border-t-0 tbl:p-0 tbl:last:border-b-0 ${
         selected ? "bg-accent-soft/70" : "bg-surface tbl:bg-transparent tbl:hover:bg-tint/55"
       }`}
     >

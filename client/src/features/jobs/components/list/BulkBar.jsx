@@ -13,7 +13,7 @@ export default function BulkBar({ count, onMove, onArchive, onDelete, onExport, 
     <div
       role="region"
       aria-label="Bulk actions"
-      className="sticky bottom-[72px] z-12 mt-4 flex flex-wrap items-center gap-x-3 gap-y-2.5 rounded-[10px] border border-ink bg-surface px-3.5 py-2.5 shadow-float sm:bottom-4"
+      className="animate-rise sticky bottom-[72px] z-12 mt-4 flex flex-wrap items-center gap-x-3 gap-y-2.5 rounded-[10px] border border-ink bg-surface px-3.5 py-2.5 shadow-float sm:bottom-4"
     >
       <span aria-live="polite" className="text-sm font-semibold">{count} selected</span>
 

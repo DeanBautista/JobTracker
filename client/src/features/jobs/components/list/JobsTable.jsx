@@ -18,12 +18,16 @@ function SortButton({ sortKey, activeSort, dir, onSort, children }) {
   );
 }
 
-export default function JobsTable({ jobs, visible, sort, dir, onSort, selection, actions }) {
+export default function JobsTable({ jobs, intro = false, visible, sort, dir, onSort, selection, actions }) {
   const ariaSort = (key) => (sort === key ? (dir === "asc" ? "ascending" : "descending") : "none");
   const sortProps = { activeSort: sort, dir, onSort };
 
   return (
-    <div className="tbl:relative tbl:overflow-x-auto tbl:rounded-lg tbl:border tbl:border-rule tbl:bg-surface">
+    <div
+      className={`tbl:relative tbl:overflow-x-auto tbl:rounded-lg tbl:border tbl:border-rule tbl:bg-surface ${
+        intro ? "tbl:overflow-y-hidden" : ""
+      }`}
+    >
       <table aria-label="Jobs" className="block w-full border-collapse text-sm tbl:table tbl:min-w-[900px]">
         <thead className="hidden tbl:table-header-group">
           <tr>
@@ -75,6 +79,8 @@ export default function JobsTable({ jobs, visible, sort, dir, onSort, selection,
             <JobRow
               key={job.id}
               job={job}
+              index={index}
+              intro={intro}
               visible={visible}
               selected={selection.selected.has(job.id)}
               onToggle={() => selection.toggle(job.id)}

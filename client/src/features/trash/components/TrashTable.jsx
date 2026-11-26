@@ -3,11 +3,15 @@ import TrashRow from "./TrashRow";
 const thBase =
   "border-b border-rule bg-tint px-2.5 py-[11px] text-left font-mono text-[11px] leading-[1.2] font-medium tracking-[0.06em] whitespace-nowrap text-muted uppercase";
 
-export default function TrashTable({ view, jobs, selection, actions, onPurge }) {
+export default function TrashTable({ view, jobs, intro = false, selection, actions, onPurge }) {
   const isTrash = view === "trash";
 
   return (
-    <div className="tbl:relative tbl:overflow-x-auto tbl:rounded-lg tbl:border tbl:border-rule tbl:bg-surface">
+    <div
+      className={`tbl:relative tbl:overflow-x-auto tbl:rounded-lg tbl:border tbl:border-rule tbl:bg-surface ${
+        intro ? "tbl:overflow-y-hidden" : ""
+      }`}
+    >
       {/* The header row is hidden on mobile, so select-all lives here instead. */}
       <label className="mb-2.5 flex cursor-pointer items-center gap-2.5 px-1 font-mono text-xs tracking-[0.06em] text-muted uppercase tbl:hidden">
         <input
@@ -45,10 +49,12 @@ export default function TrashTable({ view, jobs, selection, actions, onPurge }) 
         </thead>
 
         <tbody className="block tbl:table-row-group">
-          {jobs.map((job) => (
+          {jobs.map((job, index) => (
             <TrashRow
               key={job.id}
               job={job}
+              index={index}
+              intro={intro}
               view={view}
               selected={selection.selected.has(job.id)}
               onToggle={() => selection.toggle(job.id)}

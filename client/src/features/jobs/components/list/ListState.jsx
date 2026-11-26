@@ -34,7 +34,7 @@ export default function ListState({ variant, onRetry }) {
     <section
       role={variant === "error" ? "alert" : undefined}
       aria-labelledby="list-state-title"
-      className="rounded-lg border border-dashed border-muted bg-surface px-6 py-14 text-center"
+      className="animate-rise rounded-lg border border-dashed border-muted bg-surface px-6 py-14 text-center"
     >
       <h2 id="list-state-title" className="font-serif text-[1.7rem] leading-[1.15] font-normal tracking-[-0.015em]">
         {title}
