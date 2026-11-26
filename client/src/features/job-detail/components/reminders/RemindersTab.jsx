@@ -1,3 +1,4 @@
+import useIntro from "@/hooks/useIntro";
 import Panel from "../../../../components/ui/Panel";
 import SectionHeader from "../../../../components/ui/SectionHeader";
 import StateCard from "../../../../components/ui/StateCard";
@@ -7,11 +8,14 @@ import ReminderRow from "./ReminderRow";
 export default function RemindersTab({ job, readOnly, actions, onAdd, onEdit }) {
   const open = job.reminders.filter((r) => !r.doneAt).sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt));
   const done = job.reminders.filter((r) => r.doneAt).sort((a, b) => new Date(b.doneAt) - new Date(a.doneAt));
+  const intro = useIntro(true);
 
-  const row = (reminder) => (
+  const row = (reminder, index) => (
     <ReminderRow
       key={reminder.id}
       reminder={reminder}
+      index={index}
+      intro={intro}
       readOnly={readOnly}
       onComplete={() => actions.complete(job.id, reminder.id, !reminder.doneAt)}
       onEdit={() => onEdit(reminder)}

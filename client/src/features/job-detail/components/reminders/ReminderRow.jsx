@@ -4,13 +4,19 @@ import TextBadge from "../../../../components/ui/TextBadge";
 import { REMINDER_ORIGIN_LABELS } from "../../utils/detailOptions";
 import { formatDate, getDueInfo } from "../../utils/formatters";
 
-export default function ReminderRow({ reminder, readOnly, onComplete, onEdit, onSnooze, onDismiss, onDelete }) {
+export default function ReminderRow({ reminder, index = 0, intro = false, readOnly, onComplete, onEdit, onSnooze, onDismiss, onDelete }) {
   const done = Boolean(reminder.doneAt);
   const due = getDueInfo(reminder);
 
   return (
     // auto-sized side columns: the 40px buttons used to spill out of 30-34px tracks
-    <article className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2 border-b border-rule py-3.5 last:border-b-0 sm:gap-x-3">
+    <article
+      style={intro ? { animationDelay: `${Math.min(index, 5) * 40}ms` } : undefined}
+      className={cx(
+        intro && "animate-rise",
+        "grid grid-cols-[auto_minmax(0,1fr)_auto] items-start ..."
+      )}
+    >
       <div className="grid w-10 place-items-center">
         {done ? (
           <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-accent-soft font-semibold text-accent">
