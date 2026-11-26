@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Banner from "../../../components/ui/Banner";
 import Breadcrumbs from "../../../components/ui/Breadcrumbs";
+import scrollToTop from "@/lib/scrollToTop";
 import useJobForm from "../hooks/useJobForm";
 import useJobOrigin from "../hooks/useJobOrigin";
 import useJobTab from "../hooks/useJobTab";
+import useUnsavedChangesGuard from "../hooks/useUnsavedChangesGuard";
 import { CLOSED_STAGES, JOB_TABS } from "../utils/detailOptions";
 import { formatDate } from "../utils/formatters";
+import { getChanges } from "../utils/jobForm";
 import ArchiveJobDialog from "./ArchiveJobDialog";
 import DeleteJobDialog from "./DeleteJobDialog";
 import DocumentsTab from "./documents/DocumentsTab";
@@ -18,23 +21,69 @@ import ReminderDialog from "./reminders/ReminderDialog";
 import RemindersTab from "./reminders/RemindersTab";
 import SaveStatus from "./SaveStatus";
 import TimelineTab from "./timeline/TimelineTab";
+import UnsavedChangesDialog from "./UnsavedChangesDialog";
 
-export default function JobDetailView({ job, actions, saveStatus, onSave, onRetrySave, onCountChange }) {
+export default function JobDetailView({ job, actions, saveStatus, onSave, onCountChange }) {
   const [tab, setTab] = useJobTab();
   const origin = useJobOrigin();
   const form = useJobForm(job);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [reminderDialog, setReminderDialog] = useState(null); // null | { reminder? }
+  const [failed, setFailed] = useState(null); // null | { patch, snapshot }
+  const mounted = useRef(false);
 
   const readOnly = Boolean(job.archived || job.deletedAt);
   const counts = job.counts;
 
-  // Title autosaves on blur. Stage and priority only edit the form; Save changes sends them.
+  const dirty = !readOnly && Object.keys(getChanges(job, form.values)).length > 0;
+  const saving = saveStatus === "saving";
+  const leaveGuard = useUnsavedChangesGuard(dirty || saving);
+
+  // "Could not save" only applies while the form still matches the failed attempt.
+  let displayStatus = dirty ? "unsaved" : "saved";
+  if (saving) displayStatus = "saving";
+  else if (saveStatus === "error" && dirty && failed?.snapshot === JSON.stringify(form.values)) {
+    displayStatus = "error";
+  }
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  // Archiving makes fields read-only, so discard edits once it succeeds.
+  useEffect(() => {
+    if (!job.archived) return;
+    form.reset(job);
+    setFailed(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job.archived]);
+
+  const save = async (patch, { scroll = false } = {}) => {
+    const submitted = form.values;
+    setFailed(null);
+
+    const result = await onSave(patch);
+    if (!result || !mounted.current) return;
+
+    if (result.ok) form.syncSaved(result.job, patch, submitted);
+    else setFailed({ patch, snapshot: JSON.stringify(submitted) });
+
+    if (scroll) scrollToTop();
+  };
+
+  const handleRetry = () => {
+    if (failed) save(failed.patch, { scroll: true });
+  };
+
+  // Title autosaves on blur (no scrolling). Stage and priority wait for Save changes.
   const handleTitleBlur = () => {
     const title = form.values.title.trim();
     if (!title) return form.setError("title", "Enter a job title.");
-    if (title !== job.title) onSave({ title });
+    if (title !== job.title) save({ title });
   };
   const handleStageChange = (stage) => {
     // Reopening: reset the closed-job fields so they don't count as unsaved changes.
@@ -93,11 +142,18 @@ export default function JobDetailView({ job, actions, saveStatus, onSave, onRetr
         onDelete={() => setDeleteOpen(true)}
         onAddReminder={() => setReminderDialog({})}
       />
-      <SaveStatus status={saveStatus} hidden={readOnly} onRetry={onRetrySave} />
+      <SaveStatus status={displayStatus} hidden={readOnly} onRetry={handleRetry} />
       <JobTabs tabs={JOB_TABS} active={tab} counts={counts} />
 
       {tab === "overview" && (
-        <OverviewTab job={job} form={form} readOnly={readOnly} onSave={onSave} onTabChange={setTab} />
+        <OverviewTab
+          job={job}
+          form={form}
+          readOnly={readOnly}
+          onSave={(changes) => save(changes, { scroll: true })}
+          onInvalid={scrollToTop}
+          onTabChange={setTab}
+        />
       )}
       {tab === "notes" && <NotesTab job={job} readOnly={readOnly} onCountChange={onCountChange} />}
       {tab === "timeline" && <TimelineTab job={job} />}
@@ -125,6 +181,7 @@ export default function JobDetailView({ job, actions, saveStatus, onSave, onRetr
       <ArchiveJobDialog
         open={archiveOpen}
         job={job}
+        hasUnsavedChanges={dirty}
         onClose={() => setArchiveOpen(false)}
         onConfirm={() => {
           actions.job.archive(job.id);
@@ -137,6 +194,12 @@ export default function JobDetailView({ job, actions, saveStatus, onSave, onRetr
         job={job}
         onClose={() => setReminderDialog(null)}
         onSubmit={handleReminderSubmit}
+      />
+      <UnsavedChangesDialog
+        open={leaveGuard.open}
+        saving={saving}
+        onStay={leaveGuard.stay}
+        onLeave={leaveGuard.leave}
       />
     </>
   );

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { forceReload } from "./leaveGuard";
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? "/api",
@@ -14,7 +15,7 @@ let onAuthFailure = () => {};
 // The user this tab believes it is signed in as. If a refresh returns someone else,
 // another tab switched accounts, so this tab's state is stale.
 let expectedUserId = null;
-let onAccountChange = () => window.location.reload();
+let onAccountChange = forceReload;
 
 export const setAccessToken = (token) => {
   accessToken = token;

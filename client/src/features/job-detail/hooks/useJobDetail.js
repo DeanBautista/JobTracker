@@ -3,20 +3,22 @@ import useToast from "@/hooks/useToast";
 import { api, getApiError } from "@/lib/api";
 
 /**
- * Loads one job and owns autosave state.
+ * Loads one job and owns save requests.
  *   status:     "loading" | "success" | "not-found" | "error"
  *   saveStatus: "saved" | "saving" | "error"
- * Replace the two mock calls (marked TODO) with real API requests.
+ *   saveJob resolves to { ok: true, job }, { ok: false },
+ *   or null if a different job has since been loaded.
  */
 export default function useJobDetail(jobId) {
   const { show } = useToast();
   const [state, setState] = useState({ status: "loading", job: null });
   const [saveStatus, setSaveStatus] = useState("saved");
   const [reloadKey, setReloadKey] = useState(0);
-  const lastPatch = useRef(null);
+  const session = useRef({ queue: Promise.resolve(), pending: 0 });
 
   useEffect(() => {
     let cancelled = false;
+    session.current = { queue: Promise.resolve(), pending: 0 };
     setState({ status: "loading", job: null });
     setSaveStatus("saved");
 
@@ -40,25 +42,39 @@ export default function useJobDetail(jobId) {
   }, [jobId, reloadKey]);
 
   const saveJob = useCallback(
-    async (patch) => {
-      lastPatch.current = patch;
+    (patch) => {
+      const current = session.current;
+      current.pending += 1;
       setSaveStatus("saving");
-      try {
-        const { data } = await api.patch(`/jobs/${jobId}`, patch);
-        setState((prev) => ({ ...prev, job: { ...prev.job, ...data } }));
-        setSaveStatus("saved");
-        show("Changes saved.", { duration: 3000 });
-      } catch (err) {
-        setSaveStatus("error");
-        show(getApiError(err).message);
-      }
+
+      const finish = (result) => {
+        current.pending -= 1;
+        if (session.current !== current) return null;
+        if (current.pending > 0) setSaveStatus("saving");
+        else setSaveStatus(result.ok ? "saved" : "error");
+        return result;
+      };
+
+      const request = current.queue.then(async () => {
+        try {
+          const { data } = await api.patch(`/jobs/${jobId}`, patch);
+          const job = data.job ?? data;
+          if (session.current === current) {
+            setState((prev) => ({ ...prev, job: { ...prev.job, ...job } }));
+          }
+          show("Changes saved.", { duration: 3000 });
+          return finish({ ok: true, job });
+        } catch (err) {
+          show(getApiError(err).message);
+          return finish({ ok: false });
+        }
+      });
+
+      current.queue = request;
+      return request;
     },
     [jobId, show],
   );
-
-  const retrySave = useCallback(() => {
-    if (lastPatch.current) saveJob(lastPatch.current);
-  }, [saveJob]);
 
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
 
@@ -70,5 +86,5 @@ export default function useJobDetail(jobId) {
     );
   }, []);
 
-  return { ...state, saveStatus, saveJob, retrySave, reload, patchJob };
+  return { ...state, saveStatus, saveJob, reload, patchJob };
 }

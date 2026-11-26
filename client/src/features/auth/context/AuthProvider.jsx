@@ -6,6 +6,7 @@ import {
   setExpectedUserId,
 } from "@/lib/api";
 import { authChannel, broadcastAuth } from "@/lib/authChannel";
+import { forceReload } from "@/lib/leaveGuard";
 import * as authApi from "../api/authApi";
 import { AuthContext } from "./AuthContext";
 
@@ -70,7 +71,7 @@ export default function AuthProvider({ children }) {
         const current = userRef.current;
         // Signed out here, or signed in as someone else: re-sync from the cookie.
         if (!current || String(current.id) !== String(userId)) {
-          window.location.reload();
+          forceReload();
         }
       }
     };
