@@ -20,11 +20,14 @@ const CHIP_STYLES = {
   urgent: "border border-danger/30 bg-danger-soft text-danger",
 };
 
+const STAGGER_LIMIT = 6;
+const STAGGER_MS = 40;
+
 /**
  * Pure presentation. Drag behaviour lives in DraggableJobCard, so this same card is
  * used in the column, in the drag overlay, and anywhere else you need it.
  */
-export default function JobCard({ job, onMove, onArchive, onDelete, overlay = false }) {
+export default function JobCard({ job, onMove, onArchive, onDelete, overlay = false, index = Infinity }) {
   const closed = isClosedStage(job.stage);
   const title = `${job.title} at ${job.company}`;
   const chips = getCardChips(job);
@@ -34,8 +37,10 @@ export default function JobCard({ job, onMove, onArchive, onDelete, overlay = fa
       aria-label={title}
       data-mode={job.mode}
       data-priority={job.priority}
+      style={index < STAGGER_LIMIT ? { animationDelay: `${index * STAGGER_MS}ms` } : undefined}
       className={cx(
         "relative isolate min-w-0 rounded-lg border bg-surface transition-[border-color,box-shadow] has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-3 has-[a:focus-visible]:outline-accent motion-reduce:transition-none",
+        !overlay && index < STAGGER_LIMIT && "group-data-[intro=true]/board:animate-rise",
         overlay
           ? "pointer-events-none rotate-1 cursor-grabbing border-accent shadow-[0_14px_28px_rgb(0_0_0/0.18)]"
           : "border-rule hover:border-muted hover:shadow-[0_4px_12px_rgb(0_0_0/0.05)]",

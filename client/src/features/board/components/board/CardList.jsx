@@ -14,6 +14,7 @@ export default function CardList({ stage, jobs, dropTarget, onMove, onArchive, o
         <DraggableJobCard
           key={job.id}
           job={job}
+          index={i}
           onMove={onMove}
           onArchive={onArchive}
           onDelete={onDelete}

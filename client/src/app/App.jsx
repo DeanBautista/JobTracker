@@ -9,6 +9,30 @@ const SPLASH_MIN_MS = 900; // never flash the splash for just a moment
 const SPLASH_FILL_MS = 300; // time for the bar to finish filling
 const SPLASH_FADE_MS = 450; // keep in sync with the transition in index.html
 
+// 1. Reloading the tab shouldn't replay the splash.
+const navType = performance.getEntriesByType?.("navigation")?.[0]?.type;
+if (navType === "reload") {
+  document.getElementById("boot-splash")?.remove();
+}
+
+// 2. Hold page animations only if a splash is actually on screen.
+function splashVisible() {
+  const el = document.getElementById("boot-splash");
+  if (!el) return false;
+  const s = getComputedStyle(el);
+  return s.display !== "none" && s.visibility !== "hidden" && s.opacity !== "0";
+}
+
+if (splashVisible()) {
+  document.documentElement.dataset.booting = "true";
+}
+
+function releaseBoot() {
+  if (!document.documentElement.hasAttribute("data-booting")) return;
+  delete document.documentElement.dataset.booting;
+  window.dispatchEvent(new Event("splash-done"));
+}
+
 // Fades out the static splash in index.html once auth has finished loading
 // and the minimum display time has passed.
 function SplashGate() {
@@ -30,7 +54,10 @@ function SplashGate() {
     }
 
     const el = document.getElementById("boot-splash");
-    if (!el) return;
+    if (!el) {
+      releaseBoot();
+      return;
+    }
 
     // Freeze the bar where it is, then run it to 100% before leaving.
     const fill = el.querySelector(".bs-bar i");
@@ -42,10 +69,11 @@ function SplashGate() {
       fill.style.transform = "scaleX(1)";
     }
 
-    const leave = setTimeout(
-      () => el.classList.add("is-leaving"),
-      SPLASH_FILL_MS + 100
-    );
+    const leave = setTimeout(() => {
+      el.classList.add("is-leaving");
+      releaseBoot(); // animations start as the splash fades
+    }, SPLASH_FILL_MS + 100);
+
     const remove = setTimeout(
       () => el.remove(),
       SPLASH_FILL_MS + 100 + SPLASH_FADE_MS + 50

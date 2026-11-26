@@ -1,8 +1,28 @@
+import CountUp from "@/components/CountUp";
 import { buildTiles } from "../utils/stats";
 import CardStatus from "./shared/CardStatus";
 import InfoTip from "./shared/InfoTip";
 
 const DELTA_TONE = { up: "text-accent", down: "text-danger" };
+
+function TileValue({ value }) {
+  if (typeof value === "number") return <CountUp value={value} />;
+  if (typeof value !== "string") return value;
+
+  const m = value.match(/^(\D*?)(\d[\d,]*(?:\.\d+)?)(.*)$/s);
+  if (!m) return value;
+
+  const [, pre, num, post] = m;
+  const decimals = num.includes(".") ? num.split(".")[1].length : 0;
+
+  return (
+    <>
+      {pre}
+      <CountUp value={Number(num.replace(/,/g, ""))} decimals={decimals} />
+      {post}
+    </>
+  );
+}
 
 export default function StatTiles({ stats, status, range, onRetry }) {
   if (status !== "success") {
@@ -27,7 +47,7 @@ export default function StatTiles({ stats, status, range, onRetry }) {
             <InfoTip label={tile.label}>{tile.hint}</InfoTip>
           </div>
           <p className="mt-2 mb-1.5 font-serif text-[2.1rem] leading-none tracking-[-0.025em] sm:text-[2.6rem]">
-            {tile.value}
+            <TileValue value={tile.value} />
           </p>
           <p className="font-mono text-xs leading-[1.4] text-muted">
             {tile.delta && <span className={`mr-1 ${DELTA_TONE[tile.tone]}`}>{tile.delta}</span>}

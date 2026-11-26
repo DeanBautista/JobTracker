@@ -19,7 +19,7 @@ export const DropLine = ({ edge }) => (
   </span>
 );
 
-export default function DraggableJobCard({ job, onMove, onArchive, onDelete, lineBefore = false, lineAfter = false }) {
+export default function DraggableJobCard({ job, index, onMove, onArchive, onDelete, lineBefore = false, lineAfter = false }) {
   // Every card is both draggable and a drop target (dropping on a card = placing next to it).
   // Deliberately NOT spreading `attributes`: they would make the wrapper a second tab stop
   // next to the card link and the Move menu. Keyboard users move cards with the menu.
@@ -48,7 +48,7 @@ export default function DraggableJobCard({ job, onMove, onArchive, onDelete, lin
       className={cx("relative select-none [-webkit-touch-callout:none]", drag.isDragging && "opacity-40")}
     >
       {lineBefore && <DropLine edge="top" />}
-      <JobCard job={job} onMove={onMove} onArchive={onArchive} onDelete={onDelete} />
+      <JobCard job={job} index={index} onMove={onMove} onArchive={onArchive} onDelete={onDelete} />
       {lineAfter && <DropLine edge="bottom" />}
     </div>
   );

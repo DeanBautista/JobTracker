@@ -1,3 +1,9 @@
+html[data-booting] #root *,
+html[data-booting] #root ::before,
+html[data-booting] #root ::after {
+  animation-play-state: paused !important;
+}
+
 @theme {
   --animate-rise: rise 200ms ease-out both;
   --animate-pop: pop 150ms ease-out both;
