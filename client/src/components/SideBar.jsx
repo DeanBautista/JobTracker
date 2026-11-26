@@ -1,6 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../features/auth/context/useAuth";
 import logo from "@/assets/logo.png";
+import { confirmLeave } from "@/lib/leaveGuard";
 
 const LINKS = [
   { to: "/dashboard", label: "Dashboard" },
@@ -86,7 +87,7 @@ export default function Sidebar({ open, onClose }) {
             <strong className="block text-sm leading-[1.3] font-medium">{user?.name}</strong>
             <button
               type="button"
-              onClick={logout}
+              onClick={() => confirmLeave(logout)}
               className="cursor-pointer text-[13px] text-muted underline underline-offset-3 hover:text-ink"
             >
               Log out

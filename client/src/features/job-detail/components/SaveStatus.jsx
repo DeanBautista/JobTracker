@@ -1,7 +1,7 @@
 import cx from "../../../lib/cx";
 
-const COPY = { saved: "Saved", saving: "Saving…", error: "Could not save" };
-const DOT = { saved: "bg-accent", saving: "bg-muted", error: "bg-danger" };
+const COPY = { saved: "Saved", unsaved: "Unsaved changes", saving: "Saving…", error: "Could not save" };
+const DOT = { saved: "bg-accent", unsaved: "bg-[#d97706]", saving: "bg-muted", error: "bg-danger" };
 
 // Always renders its row (even when empty) so the layout below never jumps.
 export default function SaveStatus({ status, hidden, onRetry }) {

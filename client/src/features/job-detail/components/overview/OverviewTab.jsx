@@ -12,7 +12,7 @@ import NextUpCard from "./NextUpCard";
 import OfferPanel from "./OfferPanel";
 import PayPanel from "./PayPanel";
 
-export default function OverviewTab({ job, form, readOnly, onSave, onTabChange }) {
+export default function OverviewTab({ job, form, readOnly, onSave, onInvalid, onTabChange }) {
   const { stage } = form.values;
   const intro = useIntro(true);
   const { show } = useToast();
@@ -30,7 +30,7 @@ export default function OverviewTab({ job, form, readOnly, onSave, onTabChange }
 
   return (
     <form
-      onSubmit={form.submit(handleSave)}
+      onSubmit={form.submit(handleSave, onInvalid)}
       noValidate
       aria-label="Job overview"
       data-intro={intro ? "true" : "false"}

@@ -1,6 +1,6 @@
 import Modal from "@/components/Modal";
 
-export default function ArchiveJobDialog({ open, job, onClose, onConfirm }) {
+export default function ArchiveJobDialog({ open, job, hasUnsavedChanges, onClose, onConfirm }) {
   if (!open) return null; // Modal opens on mount, so unmount to close
 
   return (
@@ -15,6 +15,9 @@ export default function ArchiveJobDialog({ open, job, onClose, onConfirm }) {
           “{job.title}” at {job.company} will be hidden from your Board and List. It still counts on your dashboard, and you
           can unarchive it any time.
         </p>
+        {hasUnsavedChanges && (
+          <p className="mt-3 text-sm font-semibold text-danger">Your unsaved changes will be discarded.</p>
+        )}
       </div>
       <div className="flex justify-end gap-2 border-t border-rule px-5 py-3">
         <button type="button" className="btn btn-sm" onClick={onClose} data-autofocus>

@@ -48,7 +48,7 @@ export default function JobDetailPage() {
   const navigate = useNavigate();
   const origin = useJobOrigin();
   const { show } = useToast();
-  const { status, job, saveStatus, saveJob, retrySave, reload, patchJob } = useJobDetail(jobId);
+  const { status, job, saveStatus, saveJob, reload, patchJob } = useJobDetail(jobId);
 
   const run = async (request, onDone) => {
     try {
@@ -94,7 +94,7 @@ export default function JobDetailPage() {
       remove: (id) =>
         run(() => trashJobs([Number(id)]), () => {
           notifyJobsChanged();
-          navigate(origin.to);
+          navigate(origin.to, { state: { skipLeaveGuard: true } });
           show("Job moved to Trash.", { action: { label: "Undo", onClick: () => undoTrash(id) } });
         }),
     },
@@ -141,7 +141,6 @@ export default function JobDetailPage() {
       actions={actions}
       saveStatus={saveStatus}
       onSave={saveJob}
-      onRetrySave={retrySave}
       onCountChange={setCount}
     />
   );
