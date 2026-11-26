@@ -1,7 +1,7 @@
 // Dashed card for empty / error / not-found states.
 export default function StateCard({ icon, title, message, action, role = "status" }) {
   return (
-    <div role={role} className="rounded-lg border border-dashed border-muted bg-surface px-6 py-12 text-center">
+    <div role={role} className="animate-rise rounded-lg border border-dashed border-muted bg-surface px-6 py-12 text-center">
       <div
         aria-hidden="true"
         className="mx-auto mb-4 grid size-[42px] place-items-center rounded-full border border-rule font-serif text-xl"

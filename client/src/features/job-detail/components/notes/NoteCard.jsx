@@ -1,10 +1,15 @@
 import Panel from "../../../../components/ui/Panel";
+import cx from "../../../../lib/cx";
 import TextBadge from "../../../../components/ui/TextBadge";
 import { formatDateTime } from "../../utils/formatters";
 
-export default function NoteCard({ note, readOnly, onTogglePin, onEdit, onDelete }) {
+export default function NoteCard({ note, index = 0, intro = false, readOnly, onTogglePin, onEdit, onDelete }) {
   return (
-    <Panel as="article" className="p-3.5 sm:px-5 sm:py-[17px]">
+    <Panel
+      as="article"
+      style={intro ? { animationDelay: `${Math.min(index, 5) * 40}ms` } : undefined}
+      className={cx(intro && "animate-rise", "p-3.5 sm:px-5 sm:py-[17px]")}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
           {note.pinned && <TextBadge tone="accent">Pinned</TextBadge>}

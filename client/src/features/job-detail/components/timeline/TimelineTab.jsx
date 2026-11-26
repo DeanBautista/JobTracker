@@ -1,4 +1,5 @@
 import { useState } from "react";
+import useIntro from "@/hooks/useIntro";
 import cx from "@/lib/cx";
 import Panel from "@/components/ui/Panel";
 import SectionHeader from "@/components/ui/SectionHeader";
@@ -25,6 +26,7 @@ const BADGES = {
 
 export default function TimelineTab({ job }) {
   const { status, events: all, retry } = useJobTimeline(job.id);
+  const intro = useIntro(status === "success");
   const [filter, setFilter] = useState("all");
   const events = all.filter((e) => filter === "all" || e.type === filter);
 
@@ -80,12 +82,16 @@ export default function TimelineTab({ job }) {
                 <p className="py-6 text-center text-meta text-muted">No events of this type.</p>
               ) : (
                 <ol>
-                  {events.map((event) => {
+                  {events.map((event, index) => {
                     const badge = BADGES[event.type];
                     return (
                       <li
                         key={event.id}
-                        className="grid grid-cols-[34px_minmax(0,1fr)] items-start gap-x-[13px] gap-y-1.5 border-b border-rule py-[17px] last:border-b-0 sm:grid-cols-[34px_minmax(0,1fr)_auto]"
+                        style={intro ? { animationDelay: `${Math.min(index, 5) * 40}ms` } : undefined}
+                        className={cx(
+                          intro && "animate-rise",
+                          "grid grid-cols-[34px_minmax(0,1fr)] items-start gap-x-[13px] gap-y-1.5 border-b border-rule py-[17px] last:border-b-0 sm:grid-cols-[34px_minmax(0,1fr)_auto]"
+                         )}
                       >
                         <span
                           aria-hidden="true"

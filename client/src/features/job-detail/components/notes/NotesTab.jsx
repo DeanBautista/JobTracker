@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import cx from "@/lib/cx";
+import useIntro from "@/hooks/useIntro";
 import Field from "../../../../components/ui/Field";
 import Panel from "../../../../components/ui/Panel";
 import SectionHeader from "../../../../components/ui/SectionHeader";
@@ -9,6 +11,7 @@ import NoteEditDialog from "./NoteEditDialog";
 
 export default function NotesTab({ job, readOnly, onCountChange }) {
   const { status, notes: loaded, retry, add, edit, togglePin, remove } = useJobNotes(job.id, onCountChange);
+  const intro = useIntro(status === "success");
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -51,7 +54,10 @@ export default function NotesTab({ job, readOnly, onCountChange }) {
       />
 
       {!readOnly && (
-        <Panel aria-labelledby="add-note-heading">
+        <Panel
+          aria-labelledby="add-note-heading"
+          className={cx(intro && "animate-rise")}
+        >
           <Panel.Head id="add-note-heading" title="Add a note" description="Notes are private to your job tracker." />
           <Panel.Body>
             <form onSubmit={handleAdd} noValidate className="grid gap-3.5">
@@ -107,10 +113,12 @@ export default function NotesTab({ job, readOnly, onCountChange }) {
         (notes.length === 0 ? (
           <StateCard icon="✎" title="No notes yet" message="Add a note after a call, application update, or interview." />
         ) : (
-          notes.map((note) => (
+          notes.map((note, index) => (
             <NoteCard
               key={note.id}
               note={note}
+              index={index}
+              intro={intro}
               readOnly={readOnly}
               onTogglePin={() => togglePin(note.id, !note.pinned)}
               onEdit={() => setEditing(note)}
