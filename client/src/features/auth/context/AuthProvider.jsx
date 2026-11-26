@@ -1,5 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { refreshSession, setAccessToken, setAuthFailureHandler } from "@/lib/api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  refreshSession,
+  setAccessToken,
+  setAuthFailureHandler,
+  setExpectedUserId,
+} from "@/lib/api";
 import { authChannel, broadcastAuth } from "@/lib/authChannel";
 import * as authApi from "../api/authApi";
 import { AuthContext } from "./AuthContext";
@@ -7,6 +12,16 @@ import { AuthContext } from "./AuthContext";
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [status, setStatus] = useState("loading"); // "loading" | "authenticated" | "unauthenticated"
+
+  // Latest values for the channel listener, which is registered once.
+  const userRef = useRef(null);
+  const statusRef = useRef("loading");
+
+  useEffect(() => {
+    userRef.current = user;
+    statusRef.current = status;
+    setExpectedUserId(user?.id ?? null);
+  }, [user, status]);
 
   // Restore the session on page load from the refresh cookie.
   useEffect(() => {
@@ -22,6 +37,9 @@ export default function AuthProvider({ children }) {
         if (!active) return;
         setUser(user);
         setStatus("authenticated");
+        // Covers OAuth, which lands here after a full-page redirect.
+        // Tabs already signed in as this user ignore it.
+        broadcastAuth("login", { userId: user.id });
       })
       .catch(() => {
         if (!active) return;
@@ -33,15 +51,27 @@ export default function AuthProvider({ children }) {
     };
   }, []);
 
-  // Log this tab out when another tab logs out.
+  // Keep this tab in sync with login/logout in other tabs.
   useEffect(() => {
     if (!authChannel) return;
 
     const onMessage = (e) => {
-      if (e.data?.type === "logout") {
+      const { type, userId } = e.data || {};
+
+      if (type === "logout") {
         setAccessToken(null);
         setUser(null);
         setStatus("unauthenticated");
+        return;
+      }
+
+      if (type === "login") {
+        if (statusRef.current === "loading") return; // already restoring from the cookie
+        const current = userRef.current;
+        // Signed out here, or signed in as someone else: re-sync from the cookie.
+        if (!current || String(current.id) !== String(userId)) {
+          window.location.reload();
+        }
       }
     };
 
@@ -49,21 +79,28 @@ export default function AuthProvider({ children }) {
     return () => authChannel.removeEventListener("message", onMessage);
   }, []);
 
-  const login = useCallback(async (credentials) => {
-    const { accessToken, user } = await authApi.login(credentials);
+  const signIn = useCallback(({ accessToken, user }) => {
     setAccessToken(accessToken);
     setUser(user);
     setStatus("authenticated");
+    broadcastAuth("login", { userId: user.id });
     return user;
   }, []);
 
-  const demoLogin = useCallback(async () => {
-    const { accessToken, user } = await authApi.demoLogin();
-    setAccessToken(accessToken);
-    setUser(user);
-    setStatus("authenticated");
-    return user;
-  }, []);
+  const login = useCallback(
+    async (credentials) => signIn(await authApi.login(credentials)),
+    [signIn]
+  );
+
+  const demoLogin = useCallback(
+    async () => signIn(await authApi.demoLogin()),
+    [signIn]
+  );
+
+  const verifyEmail = useCallback(
+    async (token) => signIn(await authApi.verifyEmail(token)),
+    [signIn]
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -75,14 +112,6 @@ export default function AuthProvider({ children }) {
       setStatus("unauthenticated");
       broadcastAuth("logout");
     }
-  }, []);
-
-  const verifyEmail = useCallback(async (token) => {
-    const { accessToken, user } = await authApi.verifyEmail(token);
-    setAccessToken(accessToken);
-    setUser(user);
-    setStatus("authenticated");
-    return user;
   }, []);
 
   const completeOnboarding = useCallback(async () => {

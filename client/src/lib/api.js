@@ -11,12 +11,25 @@ export const api = axios.create({
 let accessToken = null;
 let onAuthFailure = () => {};
 
+// The user this tab believes it is signed in as. If a refresh returns someone else,
+// another tab switched accounts, so this tab's state is stale.
+let expectedUserId = null;
+let onAccountChange = () => window.location.reload();
+
 export const setAccessToken = (token) => {
   accessToken = token;
 };
 
 export const setAuthFailureHandler = (handler) => {
   onAuthFailure = handler;
+};
+
+export const setExpectedUserId = (id) => {
+  expectedUserId = id;
+};
+
+export const setAccountChangeHandler = (handler) => {
+  onAccountChange = handler;
 };
 
 api.interceptors.request.use((config) => {
@@ -47,10 +60,20 @@ export function refreshSession() {
         await wait(300);
         response = await requestRefresh();
       }
-      accessToken = response.data.accessToken;
-      const { exp } = JSON.parse(atob(accessToken.split(".")[1]));
-      console.log("[auth] token refreshed, expires at", new Date(exp * 1000).toLocaleTimeString());
-      return response.data;
+
+      const { data } = response;
+
+      // The cookie belongs to a different account than this tab was showing.
+      if (expectedUserId != null && String(data.user.id) !== String(expectedUserId)) {
+        accessToken = null;
+        onAccountChange();
+        throw Object.assign(new Error("Account changed in another tab"), {
+          code: "account_changed",
+        });
+      }
+
+      accessToken = data.accessToken;
+      return data;
     } finally {
       refreshPromise = null;
     }
@@ -77,7 +100,8 @@ api.interceptors.response.use(
       await refreshSession();
     } catch (refreshError) {
       accessToken = null;
-      onAuthFailure();
+      // A reload is already on its way, so don't flash the signed-out state.
+      if (refreshError.code !== "account_changed") onAuthFailure();
       return Promise.reject(refreshError);
     }
 
