@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import useIntro from "@/hooks/useIntro";
 import ActiveFilters from "../components/list/ActiveFilters";
 import BulkBar from "../components/list/BulkBar";
 import JobFilters from "../components/list/JobFilters";
@@ -21,6 +22,7 @@ export default function JobsListPage() {
   } = useJobFilters();
 
   const { status, jobs, total, retry, reload } = useJobs({ filters, sort, dir, page, size });
+  const intro = useIntro(status === "success");
   const selection = useJobSelection(jobs);
   const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS);
 
@@ -72,6 +74,7 @@ export default function JobsListPage() {
         <>
           <JobsTable
             jobs={jobs}
+            intro={intro}
             visible={visibleColumns}
             sort={sort}
             dir={dir}
