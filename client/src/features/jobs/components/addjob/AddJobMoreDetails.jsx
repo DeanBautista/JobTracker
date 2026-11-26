@@ -9,6 +9,14 @@ import {
 import { CURRENCIES, EMPLOYMENT_TYPES, PAY_PERIODS } from "../../utils/jobOptions";
 import JobField from "../shared/JobField";
 
+// Today in the user's own time zone, formatted as YYYY-MM-DD for date inputs.
+function todayLocal() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
 function Options({ options }) {
   return (
     <>
@@ -78,7 +86,7 @@ export default function AddJobMoreDetails({ errors }) {
             {(p) => <input {...p} name="datePosted" type="date" className={FIELD_CLASS} />}
           </JobField>
           <JobField label="Date applied">
-            {(p) => <input {...p} name="dateApplied" type="date" className={FIELD_CLASS} />}
+            {(p) => <input {...p} name="dateApplied" type="date" defaultValue={todayLocal()} className={FIELD_CLASS} />}
           </JobField>
           <JobField label="Deadline">
             {(p) => <input {...p} name="deadline" type="date" className={FIELD_CLASS} />}
