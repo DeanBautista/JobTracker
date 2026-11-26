@@ -10,7 +10,7 @@ export default function BoardState({ variant, onClear, onAdd, onRetry }) {
   return (
     <section
       role={variant === "error" ? "alert" : undefined}
-      className="mt-2 rounded-lg border border-dashed border-muted bg-surface px-6 py-14 text-center"
+      className="animate-rise mt-2 rounded-lg border border-dashed border-muted bg-surface px-6 py-14 text-center"
     >
       <h2 className="font-serif text-[1.7rem] leading-[1.15] font-normal tracking-[-0.015em]">{title}</h2>
       <p className="mx-auto mt-3 mb-6 max-w-[46ch] text-muted">{body}</p>

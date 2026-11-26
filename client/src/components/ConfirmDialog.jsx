@@ -34,7 +34,7 @@ export default function ConfirmDialog({
         e.preventDefault();
         onCancel();
       }}
-      className="m-auto w-[min(92vw,420px)] rounded-[10px] border border-ink bg-surface p-6 text-ink backdrop:bg-black/45"
+      className="m-auto w-[min(92vw,420px)] rounded-[10px] border border-ink bg-surface p-6 text-ink open:animate-pop backdrop:bg-black/45"
     >
       <h2 id="confirm-title" className="mb-1.5 font-serif text-[1.35rem] leading-[1.2] font-medium tracking-[-0.01em]">
         {title}

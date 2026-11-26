@@ -2,7 +2,7 @@ export default function EmptyDashboard({ onAddJob }) {
   return (
     <section
       aria-labelledby="empty-title"
-      className="rounded-lg border border-dashed border-muted bg-surface px-6 py-14 text-center"
+      className="animate-rise rounded-lg border border-dashed border-muted bg-surface px-6 py-14 text-center"
     >
       <h2
         id="empty-title"
