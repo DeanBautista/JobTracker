@@ -211,7 +211,7 @@ describe('GET /auth/me', () => {
 
     const res = await request(app)
       .get('/auth/me')
-      .set('Authorization', `Bearer ${signAccessToken(147)}`);
+      .set('Authorization', `Bearer ${signAccessToken(147, 1)}`);
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual(user);

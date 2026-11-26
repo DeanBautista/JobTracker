@@ -3,8 +3,9 @@ const jobModel = require('../models/jobModel');
 const { signAccessToken } = require('../utils/tokens');
 const detail = require('../models/jobDetailModel');
 const app = require('../app');
+const sessionModel = require('../models/sessionModel');
 
-const auth = () => ({ Authorization: `Bearer ${signAccessToken(147)}` });
+const auth = () => ({ Authorization: `Bearer ${signAccessToken(147, 1)}` });
 
 describe('POST /jobs', () => {
   const validBody = { title: 'Frontend Developer', company: 'Northwind' };
@@ -385,6 +386,16 @@ describe('GET /jobs', () => {
       147,
       expect.objectContaining({ stage: '', sort: 'applied', dir: 'desc', size: 10, page: 1, date: 0 })
     );
+  });
+
+  test('returns 401 session_revoked when the session is no longer active', async () => {
+    sessionModel.isActive.mockResolvedValue(false);
+
+    const res = await request(app).get('/jobs').set(auth());
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body.code).toBe('session_revoked');
+    expect(jobModel.list).not.toHaveBeenCalled();
   });
 });
 
