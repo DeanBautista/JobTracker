@@ -6,8 +6,15 @@ export default async function createJob(values, { confirmDuplicate = false } = {
     return { job: data };
   } catch (error) {
     const { status, data } = error.response ?? {};
-    if (status === 422) return { errors: data.errors };
-    if (status === 409) return { duplicate: data.duplicate };
+
+    if (status === 422) {
+      const errors = data?.errors ?? data?.fields ?? data?.details;
+      if (errors && !Array.isArray(errors) && Object.keys(errors).length > 0) {
+        return { errors };
+      }
+    }
+    if (status === 409 && data?.duplicate) return { duplicate: data.duplicate };
+
     throw new Error(data?.message || "Could not save the job. Try again.", {
       cause: error,
     });
