@@ -50,7 +50,11 @@ export default function AddJobDialog({ onClose, onCreated, initialStage = "wishl
           )}
 
           <div className="grid grid-cols-1 gap-x-[18px] gap-y-4 sm:grid-cols-2">
-            <JobField label="Job title *" error={errors.title} className="sm:col-span-2">
+            <JobField
+              label={<>Job title <span aria-hidden="true" className="text-danger">*</span></>}
+              error={errors.title}
+              className="sm:col-span-2"
+            >
               {(p) => (
                 <input
                   {...p}
@@ -66,7 +70,10 @@ export default function AddJobDialog({ onClose, onCreated, initialStage = "wishl
               )}
             </JobField>
 
-            <JobField label="Company *" error={errors.company}>
+            <JobField
+              label={<>Company <span aria-hidden="true" className="text-danger">*</span></>}
+              error={errors.company}
+            >
               {(p) => (
                 <input
                   {...p}

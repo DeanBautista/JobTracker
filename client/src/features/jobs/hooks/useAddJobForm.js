@@ -1,8 +1,13 @@
 import { useRef, useState } from "react";
+import useToast from "@/hooks/useToast";
 import createJob from "../api/createJob";
 import validateJob from "../utils/validateJob";
 
+const UNCERTAIN_MESSAGE =
+  "We couldn't confirm the save. The job may have been added, so check your list before trying again.";
+
 export default function useAddJobForm({ onDone, onCreated }) {
+  const { show } = useToast();
   const anotherRef = useRef(false);
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
@@ -50,6 +55,7 @@ export default function useAddJobForm({ onDone, onCreated }) {
       }
 
       onCreated?.(result.job);
+      show("Job added.", { duration: 5000 });
 
       if (anotherRef.current) {
         form.reset();
@@ -59,7 +65,17 @@ export default function useAddJobForm({ onDone, onCreated }) {
         onDone();
       }
     } catch (error) {
-      setFormError(error.message || "Could not save the job. Try again.");
+      const response = error.cause?.response;
+      const uncertain = Boolean(error.cause) && (!response || response.status === 504);
+      const message = uncertain
+        ? UNCERTAIN_MESSAGE
+        : error.message || "Could not save the job. Try again.";
+
+      setFormError(message);
+      show(message, uncertain ? { duration: 10000 } : undefined);
+
+      // The job may exist, so refresh the lists that watch for new jobs.
+      if (uncertain) onCreated?.();
     } finally {
       setSaving(false);
     }
