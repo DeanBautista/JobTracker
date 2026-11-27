@@ -109,6 +109,29 @@ jest.mock('./models/dashboardModel', () => ({
   hasJobs: jest.fn(),
 }));
 
+jest.mock('./models/documentModel', () => ({
+  list: jest.fn(),
+  isEditable: jest.fn(),
+  createAndLink: jest.fn(),
+  attachExisting: jest.fn(),
+  updateLinked: jest.fn(),
+  unlink: jest.fn(),
+  removeFromLibrary: jest.fn(),
+  findLinked: jest.fn(),
+}));
+
+// No test may reach Cloudinary.
+jest.mock('./utils/storage', () => ({
+  newKey: jest.fn(),
+  upload: jest.fn(),
+  remove: jest.fn(),
+  download: jest.fn(),
+}));
+
+jest.mock('./utils/fileCleanup', () => ({
+  cleanupRemovedFiles: jest.fn(),
+}));
+
 // Clears calls AND implementations, so each test sets up exactly what it needs.
 afterEach(() => {
   jest.resetAllMocks();

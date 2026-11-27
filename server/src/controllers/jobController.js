@@ -2,6 +2,7 @@ const jobModel = require('../models/jobModel');
 const AppError = require('../utils/AppError');
 const { validateCreateJob, parseListQuery, parseIds, MAX_BULK } = require('../validators/jobValidator');
 const { jobsToCsv } = require('../utils/jobsCsv');
+const { cleanupRemovedFiles } = require('../utils/fileCleanup');
 
 const PAGE_SIZES = [10, 25, 50];
 
@@ -44,6 +45,7 @@ const single = (action) => async (req, res) => {
   }
   const done = await jobModel[action](req.userId, [id]);
   if (done.length === 0) throw jobNotFound();
+  if (action === 'deleteForever') await cleanupRemovedFiles(req.userId);
   res.json({ id });
 };
 
@@ -52,6 +54,7 @@ const bulk = (action) => async (req, res) => {
   const ids = parseIds(req.body?.ids);
   if (!ids) throw invalidIds();
   const done = await jobModel[action](req.userId, ids);
+  if (action === 'deleteForever' && done.length > 0) await cleanupRemovedFiles(req.userId);
   res.json({ affected: done.length, ids: done });
 };
 
@@ -115,7 +118,9 @@ const moveJobs = async (req, res) => {
 
 // DELETE /jobs/trash
 const emptyTrash = async (req, res) => {
-  res.json({ affected: await jobModel.emptyTrash(req.userId) });
+  const affected = await jobModel.emptyTrash(req.userId);
+  if (affected > 0) await cleanupRemovedFiles(req.userId);
+  res.json({ affected });
 };
 
 const sendCsv = (res, rows) => {
