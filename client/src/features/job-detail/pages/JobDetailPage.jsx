@@ -4,7 +4,7 @@ import StateCard from "@/components/ui/StateCard";
 import JobDetailSkeleton from "../components/JobDetailSkeleton";
 import JobDetailView from "../components/JobDetailView";
 import useJobDetail from "../hooks/useJobDetail";
-import { api, getApiError } from "@/lib/api";
+import { getApiError } from "@/lib/api";
 import useJobOrigin from "../hooks/useJobOrigin";
 import { archiveJobs, notifyJobsChanged, restoreJobs, trashJobs, unarchiveJobs } from "@/features/jobs";
 
@@ -21,11 +21,6 @@ const placeholderActions = {
     edit: (id, noteId, data) => console.info("edit note", id, noteId, data),
     togglePin: (id, noteId, pinned) => console.info("pin note", id, noteId, pinned),
     remove: (id, noteId) => console.info("delete note", id, noteId),
-  },
-  documents: {
-    upload: (id, data) => console.info("upload", id, data),
-    pickExisting: (id, data) => console.info("pick existing", id, data),
-    remove: (id, fileId) => console.info("remove file", id, fileId),
   },
   interviews: {
     add: (id, data) => console.info("add round", id, data),
