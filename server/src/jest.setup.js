@@ -94,6 +94,12 @@ jest.mock('./models/jobDetailModel', () => ({
   getInterviews: jest.fn(),
   getReminders: jest.fn(),
   getTimeline: jest.fn(),
+  createReminder: jest.fn(),
+  updateReminder: jest.fn(),
+  setReminderStatus: jest.fn(),
+  snoozeReminder: jest.fn(),
+  deleteReminder: jest.fn(),
+  getNextUp: jest.fn(),
 }));
 
 jest.mock('./utils/mailer', () => ({
@@ -131,6 +137,7 @@ jest.mock('./utils/storage', () => ({
 jest.mock('./utils/fileCleanup', () => ({
   cleanupRemovedFiles: jest.fn(),
 }));
+
 
 // Clears calls AND implementations, so each test sets up exactly what it needs.
 afterEach(() => {
