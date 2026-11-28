@@ -19,7 +19,7 @@ export default function useJobNotes(jobId, onCountChange) {
   const commit = useCallback((next) => {
     notesRef.current = next;
     setNotes(next);
-    countRef.current?.(next.length);
+    countRef.current?.("notes", next.length);
   }, []);
 
   useEffect(() => {

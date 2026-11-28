@@ -158,7 +158,7 @@ export default function JobDetailView({ job, actions, saveStatus, onSave, onCoun
       {tab === "notes" && <NotesTab job={job} readOnly={readOnly} onCountChange={onCountChange} />}
       {tab === "timeline" && <TimelineTab job={job} />}
       {tab === "documents" && <DocumentsTab job={job} readOnly={readOnly} onCountChange={onCountChange} />}
-      {tab === "interviews" && <InterviewsTab job={job} readOnly={readOnly} actions={actions.interviews} />}
+      {tab === "interviews" && <InterviewsTab job={job} readOnly={readOnly} onCountChange={onCountChange} />}
       {tab === "reminders" && (
         <RemindersTab
           job={job}

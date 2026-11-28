@@ -1,6 +1,7 @@
 const m = require('../models/jobDetailModel');
 const AppError = require('../utils/AppError');
 const { validateUpdateJob } = require('../validators/jobDetailValidator');
+const { validateInterview, validateResult } = require('../validators/interviewValidator');
 
 const NOTE_TEXT_MSG = 'Enter a note up to 5000 characters';
 
@@ -103,15 +104,76 @@ const deleteNote = async (req, res) => {
   res.json({ id: noteId });
 };
 
+const interviewNotFound = () => AppError.notFound('interview_not_found', 'Interview not found');
+
+const parseInterviewId = (req) => {
+  const n = Number(req.params.interviewId);
+  if (!Number.isInteger(n) || n < 1) {
+    throw AppError.validation('invalid_interview_id', 'Invalid interview id', { interviewId: 'Invalid interview id' });
+  }
+  return n;
+};
+
+const failIfInvalid = (errors) => {
+  if (Object.keys(errors).length > 0) throw AppError.validation('validation_failed', 'Some fields are invalid', errors);
+};
+
+const createInterview = async (req, res) => {
+  const id = parseId(req);
+  const { errors, values } = validateInterview(req.body || {});
+  failIfInvalid(errors);
+  const r = await m.createInterview(req.userId, id, values);
+  if (!r) throw jobNotFound();
+  res.status(201).json(r); // { round, remindersCount }
+};
+
+const updateInterview = async (req, res) => {
+  const id = parseId(req);
+  const interviewId = parseInterviewId(req);
+  const { errors, values } = validateInterview(req.body || {});
+  failIfInvalid(errors);
+  const r = await m.updateInterview(req.userId, id, interviewId, values);
+  if (!r) throw interviewNotFound();
+  res.json(r);
+};
+
+const saveInterviewResult = async (req, res) => {
+  const id = parseId(req);
+  const interviewId = parseInterviewId(req);
+  const { errors, values } = validateResult(req.body || {});
+  failIfInvalid(errors);
+  const r = await m.saveInterviewResult(req.userId, id, interviewId, values);
+  if (!r) throw interviewNotFound();
+  res.json(r);
+};
+
+const cancelInterview = async (req, res) => {
+  const id = parseId(req);
+  const interviewId = parseInterviewId(req);
+  const r = await m.cancelInterview(req.userId, id, interviewId);
+  if (!r) throw interviewNotFound();
+  res.json(r);
+};
+
+const deleteInterview = async (req, res) => {
+  const id = parseId(req);
+  const interviewId = parseInterviewId(req);
+  const r = await m.deleteInterview(req.userId, id, interviewId);
+  if (!r) throw interviewNotFound();
+  res.json(r); // { id, remindersCount }
+};
+
 module.exports = {
   getJob,
   getNotes: tab('notes', (u, id) => m.getNotes(id)),
   getDocuments,
   getInterviews: tab('interviews', (u, id) => m.getInterviews(id)),
+  createInterview, updateInterview, saveInterviewResult, cancelInterview,
   getReminders: tab('reminders', m.getReminders),
   getTimeline: tab('timeline', m.getTimeline),
   updateJob,
   createNote,
   updateNote,
   deleteNote,
+  deleteInterview
 };

@@ -42,6 +42,12 @@ router.post('/:id/notes', requireAuth, d.createNote);
 router.patch('/:id/notes/:noteId', requireAuth, d.updateNote);
 router.delete('/:id/notes/:noteId', requireAuth, d.deleteNote);
 
+router.post('/:id/interviews', requireAuth, d.createInterview);
+router.patch('/:id/interviews/:interviewId', requireAuth, d.updateInterview);
+router.patch('/:id/interviews/:interviewId/result', requireAuth, d.saveInterviewResult);
+router.patch('/:id/interviews/:interviewId/cancel', requireAuth, d.cancelInterview);
+router.delete('/:id/interviews/:interviewId', requireAuth, d.deleteInterview);
+
 // Documents. blockDemo runs before the upload is parsed.
 router.get('/:id/documents', requireAuth, docs.getDocuments);
 router.post('/:id/documents', requireAuth, blockDemo, uploadDocument, docs.uploadAndAttach);

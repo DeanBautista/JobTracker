@@ -29,6 +29,18 @@ const RESULT_LABEL = {
   rescheduled: 'Interview rescheduled',
 };
 
+const OUTCOME_OUT = {
+  scheduled: 'scheduled', passed: 'passed', waiting: 'pending',
+  not_passed: 'failed', cancelled: 'cancelled', rescheduled: 'cancelled',
+};
+
+const ROUND_COLS = [
+  'id', 'round_type as type', 'duration_min as durationMin', 'mode', 'timezone',
+  'link_or_address as location', 'prep_notes as prepNotes', 'outcome as status',
+  'feedback', 'rating', z('scheduled_at', 'startsAt'),
+];
+
+
 const toNote = (r) => ({ ...r, id: String(r.id), pinned: Boolean(r.pinned), edited: Boolean(r.edited) });
 
 // Ownership check for tab endpoints. Includes archived and trashed jobs.
@@ -113,22 +125,114 @@ async function getDocuments(userId, id) {
   return { documents: docs.map(fix), library: library.map(fix) };
 }
 
-async function getInterviews(id) {
-  const rows = await knex('interviews')
-    .where('application_id', id)
-    .select('id', 'round_type as type', 'duration_min as durationMin', 'mode',
-      'link_or_address as location', 'prep_notes as prepNotes', 'outcome as status',
-      'feedback', 'rating', z('scheduled_at', 'startsAt'))
-    .orderBy('scheduled_at', 'desc');
-  return rows.map(({ feedback, rating, ...r }) => ({
+const toRound = ({ feedback, rating, ...r }) => {
+  const status = OUTCOME_OUT[r.status] ?? 'scheduled';
+  return {
     ...r,
     id: String(r.id),
+    status,
     location: r.location ?? '',
     prepNotes: r.prepNotes ?? '',
-    result: feedback != null || rating != null
-      ? { outcome: r.status, feedback: feedback ?? '', rating }
-      : null,
-  }));
+    result: feedback != null || rating != null ? { outcome: status, feedback: feedback ?? '', rating } : null,
+  };
+};
+
+async function getInterviews(id) {
+  const rows = await knex('interviews').where('application_id', id).select(ROUND_COLS).orderBy('scheduled_at', 'desc');
+  return rows.map(toRound);
+}
+
+const fetchRound = async (trx, interviewId) =>
+  toRound(await trx('interviews').where('id', interviewId).select(ROUND_COLS).first());
+
+const lockJob = (trx, userId, id) =>
+  trx('applications')
+    .where({ id, user_id: userId }).whereNull('deleted_at').whereNull('archived_at')
+    .forUpdate().first('id');
+
+const lockRound = (trx, id, interviewId) =>
+  trx('interviews').where({ id: interviewId, application_id: id }).forUpdate().first('id', 'outcome');
+
+const countReminders = async (trx, userId, id) =>
+  Number(
+    (await trx('reminders').where({ user_id: userId, application_id: id })
+      .whereNot('status', 'dismissed').count({ c: '*' }).first()).c,
+  );
+
+const sqlUtc = (date) => date.toISOString().slice(0, 19).replace('T', ' ');
+const AUTO_REMINDERS = [
+  { ms: 24 * 3_600_000, text: 'tomorrow' },
+  { ms: 3_600_000, text: 'in 1 hour' },
+];
+
+// Replaces the pending 1-day and 1-hour reminders. Pass scheduledAt = null to just remove them.
+async function syncInterviewReminders(trx, userId, appId, interviewId, roundType, scheduledAt) {
+  await trx('reminders').where({ interview_id: interviewId, origin: 'auto_interview', status: 'pending' }).del();
+  if (!scheduledAt) return;
+
+  const start = new Date(`${scheduledAt.replace(' ', 'T')}Z`);
+  const now = new Date();
+  const label = ROUND_LABEL[roundType] ?? roundType;
+  const rows = AUTO_REMINDERS
+    .map(({ ms, text }) => ({ at: new Date(start.getTime() - ms), text }))
+    .filter(({ at }) => at > now)
+    .map(({ at, text }) => ({
+      user_id: userId, application_id: appId, interview_id: interviewId,
+      title: `${label} ${text}`, due_at: sqlUtc(at), origin: 'auto_interview',
+    }));
+  if (rows.length) await trx('reminders').insert(rows);
+}
+
+const touch = (trx, id) => trx('applications').where({ id }).update({ last_activity_at: knex.fn.now() });
+
+async function createInterview(userId, id, v) {
+  return knex.transaction(async (trx) => {
+    if (!(await lockJob(trx, userId, id))) return null;
+    const [interviewId] = await trx('interviews').insert({ application_id: id, ...v });
+    await syncInterviewReminders(trx, userId, id, interviewId, v.round_type, v.scheduled_at);
+    await touch(trx, id);
+    return { round: await fetchRound(trx, interviewId), remindersCount: await countReminders(trx, userId, id) };
+  });
+}
+
+// Edit and reschedule are the same in-place update.
+async function updateInterview(userId, id, interviewId, v) {
+  return knex.transaction(async (trx) => {
+    if (!(await lockJob(trx, userId, id))) return null;
+    const row = await lockRound(trx, id, interviewId);
+    if (!row) return null;
+
+    await trx('interviews').where('id', interviewId).update(v);
+    if (row.outcome === 'scheduled') {
+      await syncInterviewReminders(trx, userId, id, interviewId, v.round_type, v.scheduled_at);
+    }
+    await touch(trx, id);
+    return { round: await fetchRound(trx, interviewId), remindersCount: await countReminders(trx, userId, id) };
+  });
+}
+
+async function saveInterviewResult(userId, id, interviewId, v) {
+  return knex.transaction(async (trx) => {
+    if (!(await lockJob(trx, userId, id))) return null;
+    if (!(await lockRound(trx, id, interviewId))) return null;
+
+    await trx('interviews').where('id', interviewId).update(v); // outcome, feedback, rating
+    await syncInterviewReminders(trx, userId, id, interviewId, null, null); // round is over
+    await touch(trx, id);
+    return { round: await fetchRound(trx, interviewId), remindersCount: await countReminders(trx, userId, id) };
+  });
+}
+
+async function cancelInterview(userId, id, interviewId) {
+  return knex.transaction(async (trx) => {
+    if (!(await lockJob(trx, userId, id))) return null;
+    if (!(await lockRound(trx, id, interviewId))) return null;
+
+    await trx('interviews').where({ id: interviewId, outcome: 'scheduled' }).update({ outcome: 'cancelled' });
+    await syncInterviewReminders(trx, userId, id, interviewId, null, null);
+    await touch(trx, id);
+    return { round: await fetchRound(trx, interviewId), remindersCount: await countReminders(trx, userId, id) };
+  });
 }
 
 async function getReminders(userId, id) {
@@ -289,6 +393,17 @@ async function deleteNote(userId, id, noteId) {
   });
 }
 
+async function deleteInterview(userId, id, interviewId) {
+  return knex.transaction(async (trx) => {
+    if (!(await lockJob(trx, userId, id))) return null;
+    if (!(await lockRound(trx, id, interviewId))) return null;
+
+    await trx('interviews').where({ id: interviewId, application_id: id }).del();
+    await touch(trx, id);
+    return { id: String(interviewId), remindersCount: await countReminders(trx, userId, id) };
+  });
+}
+
 module.exports = { 
     owns, 
     getOverview, 
@@ -300,5 +415,10 @@ module.exports = {
     getReminders, 
     getTimeline, 
     updateNote, 
-    deleteNote 
+    deleteNote ,
+    createInterview, 
+    updateInterview, 
+    saveInterviewResult, 
+    cancelInterview,
+    deleteInterview
 };
