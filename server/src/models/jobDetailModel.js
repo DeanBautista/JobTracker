@@ -40,6 +40,11 @@ const ROUND_COLS = [
   'feedback', 'rating', z('scheduled_at', 'startsAt'),
 ];
 
+const REMINDER_COLS = [
+  'id', 'title', 'note', 'origin', 'status',
+  z('due_at', 'dueAt'), z('created_at', 'createdAt'), z('completed_at', 'doneAt'),
+];
+const toReminder = (r) => ({ ...r, id: String(r.id), note: r.note ?? '', hasTime: true });
 
 const toNote = (r) => ({ ...r, id: String(r.id), pinned: Boolean(r.pinned), edited: Boolean(r.edited) });
 
@@ -239,10 +244,113 @@ async function getReminders(userId, id) {
   const rows = await knex('reminders')
     .where({ user_id: userId, application_id: id })
     .whereNot('status', 'dismissed')
-    .select('id', 'title', 'note', 'origin', 'status', z('due_at', 'dueAt'),
-      z('created_at', 'createdAt'), z('completed_at', 'doneAt'))
+    .select(REMINDER_COLS)
     .orderByRaw("status = 'pending' DESC, due_at ASC");
-  return rows.map((r) => ({ ...r, id: String(r.id), note: r.note ?? '', hasTime: true }));
+  return rows.map(toReminder);
+}
+
+const fetchReminder = async (trx, reminderId) =>
+  toReminder(await trx('reminders').where('id', reminderId).select(REMINDER_COLS).first());
+
+// Dismissed reminders count as gone.
+const lockReminder = (trx, userId, id, reminderId) =>
+  trx('reminders')
+    .where({ id: reminderId, user_id: userId, application_id: id }).whereNot('status', 'dismissed')
+    .forUpdate().first('id', 'origin', 'status');
+
+const reminderResult = async (trx, userId, id, reminderId) => ({
+  reminder: await fetchReminder(trx, reminderId),
+  remindersCount: await countReminders(trx, userId, id),
+});
+
+// origin is always 'manual' here. The auto_* origins are created by the app.
+async function createReminder(userId, id, v) {
+  return knex.transaction(async (trx) => {
+    if (!(await lockJob(trx, userId, id))) return null;
+    const [reminderId] = await trx('reminders').insert({
+      user_id: userId, application_id: id, origin: 'manual', ...v,
+    });
+    await touch(trx, id);
+    return reminderResult(trx, userId, id, reminderId);
+  });
+}
+
+// Origin is never editable. A new due date clears any snooze.
+async function updateReminder(userId, id, reminderId, v) {
+  return knex.transaction(async (trx) => {
+    if (!(await lockJob(trx, userId, id))) return null;
+    if (!(await lockReminder(trx, userId, id, reminderId))) return null;
+
+    const patch = { ...v };
+    if ('due_at' in v) patch.snoozed_until = null;
+    await trx('reminders').where('id', reminderId).update(patch);
+    await touch(trx, id);
+    return reminderResult(trx, userId, id, reminderId);
+  });
+}
+
+// status: 'done' or 'pending' (reopen)
+async function setReminderStatus(userId, id, reminderId, status) {
+  return knex.transaction(async (trx) => {
+    if (!(await lockJob(trx, userId, id))) return null;
+    if (!(await lockReminder(trx, userId, id, reminderId))) return null;
+
+    await trx('reminders').where('id', reminderId).update(
+      status === 'done'
+        ? { status, completed_at: knex.fn.now(), snoozed_until: null }
+        : { status, completed_at: null },
+    );
+    await touch(trx, id);
+    return reminderResult(trx, userId, id, reminderId);
+  });
+}
+
+// Moves the due date one day past the later of (current due date, now), so an overdue reminder lands in the future.
+async function snoozeReminder(userId, id, reminderId) {
+  return knex.transaction(async (trx) => {
+    if (!(await lockJob(trx, userId, id))) return null;
+    const row = await lockReminder(trx, userId, id, reminderId);
+    if (!row || row.status !== 'pending') return null;
+
+    await trx('reminders').where('id', reminderId).update({
+      due_at: knex.raw('DATE_ADD(GREATEST(due_at, UTC_TIMESTAMP()), INTERVAL 1 DAY)'),
+      snoozed_until: null,
+    });
+    await touch(trx, id);
+    return reminderResult(trx, userId, id, reminderId);
+  });
+}
+
+// Manual reminders are deleted. Auto ones are dismissed so they stay as a record.
+async function deleteReminder(userId, id, reminderId) {
+  return knex.transaction(async (trx) => {
+    if (!(await lockJob(trx, userId, id))) return null;
+    const row = await lockReminder(trx, userId, id, reminderId);
+    if (!row) return null;
+
+    if (row.origin === 'manual') await trx('reminders').where('id', reminderId).del();
+    else await trx('reminders').where('id', reminderId).update({ status: 'dismissed' });
+    await touch(trx, id);
+    return { id: String(reminderId), remindersCount: await countReminders(trx, userId, id) };
+  });
+}
+
+async function getNextUp(userId, id) {
+  const [interview, reminder] = await Promise.all([
+    knex('interviews')
+      .where({ application_id: id, outcome: 'scheduled' })
+      .where('scheduled_at', '>=', knex.fn.now())
+      .orderBy('scheduled_at')
+      .first('id', 'round_type as type', z('scheduled_at', 'startsAt')),
+    knex('reminders')
+      .where({ user_id: userId, application_id: id, status: 'pending' })
+      .orderBy('due_at')
+      .first('id', 'title', z('due_at', 'dueAt')),
+  ]);
+  return {
+    interview: interview ? { ...interview, id: String(interview.id) } : null,
+    reminder: reminder ? { ...reminder, id: String(reminder.id), hasTime: true } : null,
+  };
 }
 
 // No timeline table: built from history, notes, interviews, done reminders and files.
@@ -413,6 +521,11 @@ module.exports = {
     getDocuments, 
     getInterviews, 
     getReminders, 
+    createReminder, 
+    updateReminder, 
+    setReminderStatus, 
+    deleteReminder,
+    snoozeReminder,
     getTimeline, 
     updateNote, 
     deleteNote ,
@@ -420,5 +533,6 @@ module.exports = {
     updateInterview, 
     saveInterviewResult, 
     cancelInterview,
-    deleteInterview
+    deleteInterview,
+    getNextUp
 };

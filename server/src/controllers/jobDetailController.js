@@ -2,6 +2,7 @@ const m = require('../models/jobDetailModel');
 const AppError = require('../utils/AppError');
 const { validateUpdateJob } = require('../validators/jobDetailValidator');
 const { validateInterview, validateResult } = require('../validators/interviewValidator');
+const { validateReminder } = require('../validators/reminderValidator');
 
 const NOTE_TEXT_MSG = 'Enter a note up to 5000 characters';
 
@@ -163,6 +164,64 @@ const deleteInterview = async (req, res) => {
   res.json(r); // { id, remindersCount }
 };
 
+const reminderNotFound = () => AppError.notFound('reminder_not_found', 'Reminder not found');
+
+const parseReminderId = (req) => {
+  const n = Number(req.params.reminderId);
+  if (!Number.isInteger(n) || n < 1) {
+    throw AppError.validation('invalid_reminder_id', 'Invalid reminder id', { reminderId: 'Invalid reminder id' });
+  }
+  return n;
+};
+
+const createReminder = async (req, res) => {
+  const id = parseId(req);
+  const { errors, values } = validateReminder(req.body || {});
+  failIfInvalid(errors);
+  const r = await m.createReminder(req.userId, id, values);
+  if (!r) throw jobNotFound();
+  res.status(201).json(r); // { reminder, remindersCount }
+};
+
+const updateReminder = async (req, res) => {
+  const id = parseId(req);
+  const reminderId = parseReminderId(req);
+  const { errors, values } = validateReminder(req.body || {}, { partial: true });
+  failIfInvalid(errors);
+  if (Object.keys(values).length === 0) throw nothingToUpdate();
+  const r = await m.updateReminder(req.userId, id, reminderId, values);
+  if (!r) throw reminderNotFound();
+  res.json(r);
+};
+
+const setReminderStatus = async (req, res) => {
+  const id = parseId(req);
+  const reminderId = parseReminderId(req);
+  const status = req.body?.status;
+  if (status !== 'done' && status !== 'pending') {
+    throw AppError.validation('invalid_status', 'Must be done or pending', { status: 'Must be done or pending' });
+  }
+  const r = await m.setReminderStatus(req.userId, id, reminderId, status);
+  if (!r) throw reminderNotFound();
+  res.json(r);
+};
+
+const deleteReminder = async (req, res) => {
+  const id = parseId(req);
+  const reminderId = parseReminderId(req);
+  const r = await m.deleteReminder(req.userId, id, reminderId);
+  if (!r) throw reminderNotFound();
+  res.json(r); // { id, remindersCount }
+};
+
+const snoozeReminder = async (req, res) => {
+  const id = parseId(req);
+  const reminderId = parseReminderId(req);
+  const r = await m.snoozeReminder(req.userId, id, reminderId);
+  if (!r) throw reminderNotFound();
+  res.json(r);
+};
+
 module.exports = {
   getJob,
   getNotes: tab('notes', (u, id) => m.getNotes(id)),
@@ -175,5 +234,11 @@ module.exports = {
   createNote,
   updateNote,
   deleteNote,
-  deleteInterview
+  deleteInterview,
+  createReminder,
+  updateReminder,
+  setReminderStatus,
+  deleteReminder,
+  snoozeReminder,
+  getNextUp: tab('nextUp', m.getNextUp),
 };
