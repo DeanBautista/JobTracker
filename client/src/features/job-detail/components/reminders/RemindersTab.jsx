@@ -5,10 +5,28 @@ import StateCard from "../../../../components/ui/StateCard";
 import TextBadge from "../../../../components/ui/TextBadge";
 import ReminderRow from "./ReminderRow";
 
-export default function RemindersTab({ job, readOnly, actions, onAdd, onEdit }) {
-  const open = job.reminders.filter((r) => !r.doneAt).sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt));
-  const done = job.reminders.filter((r) => r.doneAt).sort((a, b) => new Date(b.doneAt) - new Date(a.doneAt));
+export default function RemindersTab({ job, reminders, readOnly, actions, onAdd, onEdit }) {
+  const list = reminders.items;
+  const open = list.filter((r) => !r.doneAt).sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt));
+  const done = list.filter((r) => r.doneAt).sort((a, b) => new Date(b.doneAt) - new Date(a.doneAt));
   const intro = useIntro(true);
+
+  if (reminders.status === "loading") return <p className="text-meta text-muted">Loading reminders…</p>;
+  if (reminders.status === "error") {
+    return (
+      <StateCard
+        role="alert"
+        icon="!"
+        title="Could not load reminders"
+        message="Your reminders could not be loaded. Try again."
+        action={
+          <button type="button" className="btn" onClick={reminders.retry}>
+            Try again
+          </button>
+        }
+      />
+    );
+  }
 
   const row = (reminder, index) => (
     <ReminderRow
@@ -17,11 +35,11 @@ export default function RemindersTab({ job, readOnly, actions, onAdd, onEdit }) 
       index={index}
       intro={intro}
       readOnly={readOnly}
-      onComplete={() => actions.complete(job.id, reminder.id, !reminder.doneAt)}
+      onComplete={() => reminders.complete(reminder.id, !reminder.doneAt)}
       onEdit={() => onEdit(reminder)}
-      onSnooze={() => actions.snooze(job.id, reminder.id)}
-      onDismiss={() => actions.dismiss(job.id, reminder.id)}
-      onDelete={() => actions.remove(job.id, reminder.id)}
+      onSnooze={() => reminders.snooze(reminder.id)}
+      onDismiss={() => reminders.dismiss(reminder.id)}
+      onDelete={() => reminders.remove(reminder.id)}
     />
   );
 
@@ -40,7 +58,7 @@ export default function RemindersTab({ job, readOnly, actions, onAdd, onEdit }) 
         }
       />
 
-      {job.reminders.length === 0 ? (
+      {list.length === 0 ? (
         <StateCard
           icon="◷"
           title="No reminders for this job"

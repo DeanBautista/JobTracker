@@ -2,16 +2,24 @@ import { useState } from "react";
 import Field from "../../../../components/ui/Field";
 import FieldGrid from "../../../../components/ui/FieldGrid";
 import Modal from "../../../../components/Modal";
-import { REMINDER_ORIGINS } from "../../utils/detailOptions";
 import { splitDateTime } from "../../utils/formatters";
+
+const DEFAULT_TIME = "09:00";
+
+// Local-date YYYY-MM-DD (toISOString would shift the day in UTC+8)
+function tomorrowInputValue() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 function ReminderForm({ reminder, onClose, onSubmit }) {
   const { date, time } = splitDateTime(reminder?.dueAt);
   const [v, setV] = useState({
     title: reminder?.title ?? "",
-    date,
-    time: reminder?.hasTime ? time : "",
-    origin: reminder?.origin ?? "manual",
+    date: reminder ? date : tomorrowInputValue(),
+    time: reminder ? time || DEFAULT_TIME : DEFAULT_TIME,
     note: reminder?.note ?? "",
   });
   const bind = (name) => ({ value: v[name], onChange: (e) => setV((p) => ({ ...p, [name]: e.target.value })) });
@@ -23,9 +31,7 @@ function ReminderForm({ reminder, onClose, onSubmit }) {
         e.preventDefault();
         onSubmit({
           title: v.title.trim(),
-          dueAt: `${v.date}T${v.time || "09:00"}`,
-          hasTime: Boolean(v.time),
-          origin: v.origin,
+          dueAt: new Date(`${v.date}T${v.time}`).toISOString(),
           note: v.note.trim(),
         });
       }}
@@ -34,8 +40,7 @@ function ReminderForm({ reminder, onClose, onSubmit }) {
         <FieldGrid>
           <Field id="reminder-title" label="Reminder" full required maxLength={160} placeholder="e.g. Follow up with recruiter" {...bind("title")} />
           <Field id="reminder-date" label="Due date" type="date" required {...bind("date")} />
-          <Field id="reminder-time" label="Time" type="time" {...bind("time")} />
-          <Field as="select" id="reminder-origin" label="Origin" full options={REMINDER_ORIGINS} {...bind("origin")} />
+          <Field id="reminder-time" label="Time" type="time" required {...bind("time")} />
           <Field as="textarea" id="reminder-note" label="Note" full rows={2} maxLength={1000} placeholder="Optional details" {...bind("note")} />
         </FieldGrid>
       </div>

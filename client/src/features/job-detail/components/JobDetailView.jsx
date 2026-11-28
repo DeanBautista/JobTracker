@@ -5,6 +5,7 @@ import scrollToTop from "@/lib/scrollToTop";
 import useJobForm from "../hooks/useJobForm";
 import useJobOrigin from "../hooks/useJobOrigin";
 import useJobTab from "../hooks/useJobTab";
+import useJobReminders from "../hooks/useJobReminders";
 import useUnsavedChangesGuard from "../hooks/useUnsavedChangesGuard";
 import { CLOSED_STAGES, JOB_TABS } from "../utils/detailOptions";
 import { formatDate } from "../utils/formatters";
@@ -25,6 +26,7 @@ import UnsavedChangesDialog from "./UnsavedChangesDialog";
 
 export default function JobDetailView({ job, actions, saveStatus, onSave, onCountChange }) {
   const [tab, setTab] = useJobTab();
+  const reminders = useJobReminders(job.id, tab === "reminders", onCountChange);
   const origin = useJobOrigin();
   const form = useJobForm(job);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -95,10 +97,10 @@ export default function JobDetailView({ job, actions, saveStatus, onSave, onCoun
   };
   const handlePriorityChange = (priority) => form.setValue("priority", priority);
 
-  const handleReminderSubmit = (data) => {
-    if (reminderDialog?.reminder) actions.reminders.edit(job.id, reminderDialog.reminder.id, data);
-    else actions.reminders.add(job.id, data);
-    setReminderDialog(null);
+  const handleReminderSubmit = async (data) => {
+    const current = reminderDialog?.reminder;
+    const ok = current ? await reminders.edit(current.id, data) : await reminders.add(data);
+    if (ok) setReminderDialog(null);
   };
 
   return (
@@ -162,6 +164,7 @@ export default function JobDetailView({ job, actions, saveStatus, onSave, onCoun
       {tab === "reminders" && (
         <RemindersTab
           job={job}
+          reminders={reminders}
           readOnly={readOnly}
           actions={actions.reminders}
           onAdd={() => setReminderDialog({})}

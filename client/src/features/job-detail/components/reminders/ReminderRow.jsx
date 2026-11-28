@@ -57,12 +57,15 @@ export default function ReminderRow({ reminder, index = 0, intro = false, readOn
             <>
               <ActionMenu.Item onClick={onEdit}>Edit</ActionMenu.Item>
               <ActionMenu.Item onClick={onSnooze}>Snooze 1 day</ActionMenu.Item>
-              <ActionMenu.Item onClick={onDismiss}>Dismiss</ActionMenu.Item>
             </>
           )}
-          <ActionMenu.Item danger onClick={onDelete}>
-            Delete
-          </ActionMenu.Item>
+          {reminder.origin === "manual" ? (
+            <ActionMenu.Item danger onClick={onDelete}>
+              Delete
+            </ActionMenu.Item>
+          ) : (
+            <ActionMenu.Item onClick={onDismiss}>Dismiss</ActionMenu.Item>
+          )}
         </ActionMenu>
       )}
     </article>

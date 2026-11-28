@@ -1,14 +1,24 @@
+import { useEffect, useState } from "react";
 import Panel from "../../../../components/ui/Panel";
+import { api } from "../../../../lib/api";
+import { INTERVIEW_ROUND_LABELS } from "../../utils/detailOptions";
 import { formatTime, formatWeekdayDate, getDueInfo } from "../../utils/formatters";
-
-const byDate = (key) => (a, b) => new Date(a[key]) - new Date(b[key]);
 
 export default function NextUpCard({ job, onTabChange }) {
   const now = new Date();
-  const interview = job.interviews
-    .filter((r) => r.status === "scheduled" && new Date(r.startsAt) >= now)
-    .sort(byDate("startsAt"))[0];
-  const reminder = job.reminders.filter((r) => !r.doneAt).sort(byDate("dueAt"))[0];
+  const [{ interview, reminder }, setNext] = useState({ interview: null, reminder: null });
+
+  // The Overview tab remounts on every tab switch, so this is fresh after reminder or interview changes.
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get(`/jobs/${job.id}/next-up`)
+      .then(({ data }) => !cancelled && setNext(data.nextUp))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [job.id]);
 
   return (
     <Panel className="p-[17px]">
@@ -21,7 +31,7 @@ export default function NextUpCard({ job, onTabChange }) {
         <dl className="mt-[15px] grid gap-[13px]">
           {interview && (
             <div className="grid gap-[3px]">
-              <dt className="label">{interview.type}</dt>
+              <dt className="label">{INTERVIEW_ROUND_LABELS[interview.type] ?? interview.type}</dt>
               <dd className="text-meta font-semibold">
                 {formatWeekdayDate(interview.startsAt)} · {formatTime(interview.startsAt)}
               </dd>
