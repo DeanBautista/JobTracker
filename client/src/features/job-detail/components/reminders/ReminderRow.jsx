@@ -1,5 +1,6 @@
 import cx from "../../../../lib/cx";
 import ActionMenu from "../../../../components/ui/ActionMenu";
+import Panel from "../../../../components/ui/Panel";
 import TextBadge from "../../../../components/ui/TextBadge";
 import { REMINDER_ORIGIN_LABELS } from "../../utils/detailOptions";
 import { formatDate, getDueInfo } from "../../utils/formatters";
@@ -9,12 +10,12 @@ export default function ReminderRow({ reminder, index = 0, intro = false, readOn
   const due = getDueInfo(reminder);
 
   return (
-    // auto-sized side columns: the 40px buttons used to spill out of 30-34px tracks
-    <article
+    <Panel
+      as="article"
       style={intro ? { animationDelay: `${Math.min(index, 5) * 40}ms` } : undefined}
       className={cx(
         intro && "animate-rise",
-        "grid grid-cols-[auto_minmax(0,1fr)_auto] items-start ..."
+        "grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3.5 px-3.5 py-3.5 sm:px-4",
       )}
     >
       <div className="grid w-10 place-items-center">
@@ -43,7 +44,7 @@ export default function ReminderRow({ reminder, index = 0, intro = false, readOn
         </p>
         <div className="mt-[7px] flex flex-wrap gap-x-3.5 gap-y-[7px] text-[11.5px] text-muted">
           <span>Origin: {REMINDER_ORIGIN_LABELS[reminder.origin] ?? reminder.origin}</span>
-          <span>{done && reminder.doneBy ? `Completed by ${reminder.doneBy}` : `Created ${formatDate(reminder.createdAt)}`}</span>
+          <span>Created {formatDate(reminder.createdAt)}</span>
         </div>
       </div>
 
@@ -68,6 +69,6 @@ export default function ReminderRow({ reminder, index = 0, intro = false, readOn
           )}
         </ActionMenu>
       )}
-    </article>
+    </Panel>
   );
 }

@@ -80,7 +80,7 @@ export default function RemindersTab({ job, reminders, readOnly, actions, onAdd,
               title="Due and upcoming"
               aside={open.length > 0 && <TextBadge tone="danger">{open.length} open</TextBadge>}
             />
-            {open.length === 0 ? <p className="mt-3.5 text-meta text-muted">Nothing due.</p> : <div className="mt-1.5">{open.map(row)}</div>}
+            {open.length === 0 ? <p className="mt-3.5 text-meta text-muted">Nothing due.</p> : <div className="mt-3 grid gap-2.5">{open.map(row)}</div>}
           </section>
 
           {done.length > 0 && (
@@ -91,7 +91,7 @@ export default function RemindersTab({ job, reminders, readOnly, actions, onAdd,
                 title="Completed"
                 aside={<span className="text-[12.5px] text-muted">{done.length === 1 ? "1 reminder" : `${done.length} reminders`}</span>}
               />
-              <div className="mt-1.5">{done.map(row)}</div>
+              <div className="mt-3 grid gap-2.5">{done.map(row)}</div>
             </section>
           )}
         </>
