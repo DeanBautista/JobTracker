@@ -2,13 +2,25 @@ import { useState } from "react";
 import Field from "../../../../components/ui/Field";
 import FieldGrid from "../../../../components/ui/FieldGrid";
 import Modal from "../../../../components/Modal";
-import { INTERVIEW_DURATIONS, INTERVIEW_MODES } from "../../utils/detailOptions";
-import { splitDateTime } from "../../utils/formatters";
+import { INTERVIEW_DURATIONS, INTERVIEW_MODES, INTERVIEW_ROUND_TYPES } from "../../utils/detailOptions";
+
+const pad = (n) => String(n).padStart(2, "0");
+
+// startsAt is a UTC ISO string from the server; the form shows the person's local date and time.
+function toLocalParts(iso) {
+  if (!iso) return { date: "", time: "" };
+  const d = new Date(iso);
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
 
 function InterviewForm({ round, onClose, onSubmit }) {
-  const { date, time } = splitDateTime(round?.startsAt);
+  const { date, time } = toLocalParts(round?.startsAt);
+  const [saving, setSaving] = useState(false);
   const [v, setV] = useState({
-    type: round?.type ?? "",
+    type: round?.type ?? "phone_screen",
     date,
     time,
     duration: String(round?.durationMin ?? 60),
@@ -18,23 +30,26 @@ function InterviewForm({ round, onClose, onSubmit }) {
   });
   const bind = (name) => ({ value: v[name], onChange: (e) => setV((p) => ({ ...p, [name]: e.target.value })) });
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    await onSubmit({
+      type: v.type,
+      startsAt: new Date(`${v.date}T${v.time}`).toISOString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      durationMin: Number(v.duration),
+      mode: v.mode,
+      location: v.location.trim(),
+      prepNotes: v.prepNotes.trim(),
+    });
+    setSaving(false);
+  };
+
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit({
-          type: v.type.trim(),
-          startsAt: `${v.date}T${v.time}`,
-          durationMin: Number(v.duration),
-          mode: v.mode,
-          location: v.location.trim(),
-          prepNotes: v.prepNotes.trim(),
-        });
-      }}
-    >
+    <form onSubmit={handleSubmit}>
       <Modal.Body>
         <FieldGrid>
-          <Field id="round-type" label="Round type" full required maxLength={120} placeholder="e.g. Technical interview" {...bind("type")} />
+          <Field as="select" id="round-type" label="Round type" full required options={INTERVIEW_ROUND_TYPES} {...bind("type")} />
           <Field id="round-date" label="Date" type="date" required {...bind("date")} />
           <Field id="round-time" label="Time" type="time" required {...bind("time")} />
           <Field as="select" id="round-duration" label="Duration" required options={INTERVIEW_DURATIONS} {...bind("duration")} />
@@ -63,8 +78,8 @@ function InterviewForm({ round, onClose, onSubmit }) {
         <button type="button" className="btn" onClick={onClose}>
           Cancel
         </button>
-        <button type="submit" className="btn btn-primary">
-          {round ? "Save changes" : "Save round"}
+        <button type="submit" className="btn btn-primary" disabled={saving}>
+          {saving ? "Saving…" : round ? "Save changes" : "Save round"}
         </button>
       </Modal.Foot>
     </form>

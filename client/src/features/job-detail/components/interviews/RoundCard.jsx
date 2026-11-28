@@ -1,7 +1,7 @@
 import cx from "../../../../lib/cx";
 import Panel from "../../../../components/ui/Panel";
 import TextBadge from "../../../../components/ui/TextBadge";
-import { INTERVIEW_MODE_LABELS } from "../../utils/detailOptions";
+import { INTERVIEW_MODE_LABELS, INTERVIEW_ROUND_LABELS } from "../../utils/detailOptions";
 import { formatTime } from "../../utils/formatters";
 
 const STATUS = {
@@ -24,10 +24,11 @@ function Stars({ rating }) {
   );
 }
 
-export default function RoundCard({ round, past, readOnly, onEdit, onResult, onCancel }) {
+export default function RoundCard({ round, past, readOnly, onEdit, onResult, onCancel, onDelete }) {
   const start = new Date(round.startsAt);
   const status = STATUS[round.status] ?? STATUS.pending;
   const hasLink = /^https?:\/\//.test(round.location);
+  const cancelled = round.status === "cancelled";
 
   return (
     <Panel
@@ -52,10 +53,9 @@ export default function RoundCard({ round, past, readOnly, onEdit, onResult, onC
       <div className="min-w-0">
         <div className="grid justify-items-start gap-2 sm:flex sm:items-start sm:justify-between sm:gap-3">
           <div className="min-w-0">
-            <h3 className="font-serif text-[1.08rem] leading-tight font-medium break-words">{round.type}</h3>
-            {(round.interviewer || round.role) && (
-              <p className="mt-[3px] text-xs text-muted">{[round.interviewer, round.role].filter(Boolean).join(" · ")}</p>
-            )}
+            <h3 className="font-serif text-[1.08rem] leading-tight font-medium break-words">
+              {INTERVIEW_ROUND_LABELS[round.type] ?? round.type}
+            </h3>
           </div>
           <TextBadge tone={status.tone}>{status.label}</TextBadge>
         </div>
@@ -95,20 +95,18 @@ export default function RoundCard({ round, past, readOnly, onEdit, onResult, onC
               Edit
             </button>
             {!past && (
-              <button type="button" className="btn btn-sm" onClick={onEdit}>
-                Reschedule
-              </button>
-            )}
-            {!past && (
               <button type="button" className="btn btn-sm btn-danger" onClick={onCancel}>
                 Cancel round
               </button>
             )}
-            {past && (
+            {past && !cancelled && (
               <button type="button" className={cx("btn btn-sm", !round.result && "btn-primary")} onClick={onResult}>
                 {round.result ? "Edit result" : "How did it go?"}
               </button>
             )}
+            <button type="button" className="btn btn-sm text-danger" onClick={onDelete}>
+              Delete
+            </button>
           </div>
         )}
       </div>

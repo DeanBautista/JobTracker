@@ -84,3 +84,14 @@ export const JOB_TABS = [
   { key: "interviews", label: "Interviews", countKey: "interviews" },
   { key: "reminders", label: "Reminders", countKey: "reminders" },
 ];
+
+export const INTERVIEW_ROUND_TYPES = [
+  { value: "phone_screen", label: "Phone screen" },
+  { value: "technical", label: "Technical interview" },
+  { value: "behavioral", label: "Behavioral interview" },
+  { value: "panel", label: "Panel interview" },
+  { value: "take_home", label: "Take-home" },
+  { value: "onsite", label: "Onsite interview" },
+  { value: "final", label: "Final interview" },
+];
+export const INTERVIEW_ROUND_LABELS = Object.fromEntries(INTERVIEW_ROUND_TYPES.map((t) => [t.value, t.label]));
