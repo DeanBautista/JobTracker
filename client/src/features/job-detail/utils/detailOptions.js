@@ -73,7 +73,14 @@ export const REMINDER_ORIGINS = [
   { value: "follow-up", label: "Follow-up" },
   { value: "offer", label: "Offer" },
 ];
-export const REMINDER_ORIGIN_LABELS = Object.fromEntries(REMINDER_ORIGINS.map((o) => [o.value, o.label]));
+
+export const REMINDER_ORIGIN_LABELS = {
+  manual: "Added by you",
+  auto_followup: "Follow-up",
+  auto_interview: "Interview",
+  auto_deadline: "Deadline",
+  auto_stale: "Stale job",
+};
 
 // `countKey` points at an array on the job; the tab shows its length.
 export const JOB_TABS = [

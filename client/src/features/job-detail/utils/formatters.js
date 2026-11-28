@@ -3,6 +3,9 @@
 
 const isDateOnly = (value) => value.length === 10;
 
+const HAS_ZONE = /(Z|[+-]\d{2}:\d{2})$/;
+const pad = (n) => String(n).padStart(2, "0");
+
 export function formatDate(value) {
   if (!value) return "—";
   return new Intl.DateTimeFormat("en-GB", {
@@ -37,8 +40,16 @@ export function daysSince(value, now = new Date()) {
 
 export const formatDays = (n) => `${n} ${n === 1 ? "day" : "days"}`;
 
-// "2026-10-16T14:00" -> { date: "2026-10-16", time: "14:00" }
-export const splitDateTime = (value) => (value ? { date: value.slice(0, 10), time: value.slice(11, 16) } : { date: "", time: "" });
+// "2026-10-16T14:00" (local, no zone) or "2026-10-16T06:00:00Z" (UTC) -> { date, time } in local time
+export function splitDateTime(value) {
+  if (!value) return { date: "", time: "" };
+  if (!HAS_ZONE.test(value)) return { date: value.slice(0, 10), time: value.slice(11, 16) };
+  const d = new Date(value);
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
 
 const sameDay = (a, b) => a.toDateString() === b.toDateString();
 
